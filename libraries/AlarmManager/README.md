@@ -32,9 +32,9 @@ POU/
 
 | Variable | Purpose |
 |---|---|
-| `AM_ERROR` (const 3) | Severity constant for Error-level alarms |
-| `AM_WARNING` (const 2) | Severity constant for Warning-level alarms |
-| `AM_INFO` (const 1) | Severity constant for Info/Message-level alarms |
+| `c_AM_ERROR` (const 3) | Severity constant for Error-level alarms |
+| `c_AM_WARNING` (const 2) | Severity constant for Warning-level alarms |
+| `c_AM_INFO` (const 1) | Severity constant for Info/Message-level alarms |
 | `AM_ALARMS` | Global array `[0..127]` of `AM_ALARM` structs |
 | `AM_EVENTS` | Global array `[0..127]` of `AM_EVENT` structs |
 | `AM_ALARMS_NUM` | Count of initialized alarms; controls scan range |

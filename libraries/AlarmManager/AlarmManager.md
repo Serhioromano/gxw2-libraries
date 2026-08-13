@@ -90,9 +90,9 @@ This function block configures the properties of every alarm the application int
 The severity level assigns a weight to the alarm. The library itself does not differentiate alarm behaviour based on severity; the value is stored for subsequent filtering by the query function blocks. Severity may be expressed as a literal integer or via the following global constants:
 
 - `0` — Not set
-- `1` — Message (`AM_INFO`)
-- `2` — Warning (`AM_WARNING`)
-- `3` — Error (`AM_ERROR`)
+- `1` — Message (`c_AM_INFO`)
+- `2` — Warning (`c_AM_WARNING`)
+- `3` — Error (`c_AM_ERROR`)
 
 ##### `iProcess`
 
@@ -129,11 +129,11 @@ In the POU body, invoke the block once under the initialisation pulse:
 ```iecst
 IF M8002 THEN
     (* Pressure sensor on AD0 — communication lost *)
-    fbAMINIT(iNum := 0, iProcess := 1, iSeverity := AM_WARNING, iDelay := 2,
+    fbAMINIT(iNum := 0, iProcess := 1, iSeverity := c_AM_WARNING, iDelay := 2,
         xLock := TRUE, xLatch := FALSE, xBuzzer := TRUE);
 
     (* No-flame alarm on X10 input *)
-    fbAMINIT(iNum := 1, iProcess := 1, iSeverity := AM_ERROR, iDelay := 0,
+    fbAMINIT(iNum := 1, iProcess := 1, iSeverity := c_AM_ERROR, iDelay := 0,
         xLock := TRUE, xLatch := TRUE, xBuzzer := TRUE);
 
     AM_ALARMS_NUM := 2;
@@ -286,10 +286,10 @@ IF NOT fbAMBlock.Q THEN
 END_IF;
 ```
 
-**Case 2** — Only blocking alarms of severity Error (`AM_ERROR`):
+**Case 2** — Only blocking alarms of severity Error (`c_AM_ERROR`):
 
 ```iecst
-fbAMBlock(iSeverity := AM_ERROR);
+fbAMBlock(iSeverity := c_AM_ERROR);
 IF NOT fbAMBlock.Q THEN
     (* No blocking Error-level alarm is active *)
 END_IF;
@@ -330,7 +330,7 @@ END_IF;
 **Case 2** — Any Error-level alarm:
 
 ```iecst
-fbAMHas(iSeverity := AM_ERROR);
+fbAMHas(iSeverity := c_AM_ERROR);
 IF NOT fbAMHas.Q THEN
     (* No Error-level alarm is active *)
 END_IF;
@@ -376,7 +376,7 @@ Packs the state of every alarm, bit by bit, into a contiguous block of device re
 | Variable | Scope | Type | Description                                                       |
 | -------- | ----- | ---- | ----------------------------------------------------------------- |
 | `DNUM`   | INPUT | INT  | Starting device number for the packed data.                       |
-| `PD`     | INPUT | INT  | Target device area: `AM_PACK_D` for `D` registers, `AM_PACK_R` for `R` registers. |
+| `PD`     | INPUT | INT  | Target device area: `c_AM_PACK_D` for `D` registers, `c_AM_PACK_R` for `R` registers. |
 
 #### Example
 
@@ -391,7 +391,7 @@ END_VAR
 Invoke:
 
 ```iecst
-fbAMPack(DNUM := 3280, PD := AM_PACK_D);
+fbAMPack(DNUM := 3280, PD := c_AM_PACK_D);
 ```
 
 All alarm states are written starting from `D3280`. The total number of devices consumed equals the value of `AM_ALARMS_NUM`: one 16-bit device for up to 16 alarms, two devices for up to 32 alarms, and so forth.
@@ -516,7 +516,7 @@ Packs the state of every event, bit by bit, into a contiguous block of device re
 | Variable | Scope | Type | Description                                                       |
 | -------- | ----- | ---- | ----------------------------------------------------------------- |
 | `DNUM`   | INPUT | INT  | Starting device number for the packed data.                       |
-| `PD`     | INPUT | INT  | Target device area: `AM_PACK_D` for `D` registers, `AM_PACK_R` for `R` registers. |
+| `PD`     | INPUT | INT  | Target device area: `c_AM_PACK_D` for `D` registers, `c_AM_PACK_R` for `R` registers. |
 
 #### Example
 
@@ -531,7 +531,7 @@ END_VAR
 Invoke:
 
 ```iecst
-fbAMPackE(DNUM := 3304, PD := AM_PACK_D);
+fbAMPackE(DNUM := 3304, PD := c_AM_PACK_D);
 ```
 
 All event states are written starting from `D3304`. The total number of devices consumed equals the value of `AM_EVENTS_NUM`: one device for up to 16 events, two devices for up to 32, and so on.
