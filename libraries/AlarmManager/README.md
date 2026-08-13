@@ -58,5 +58,6 @@ POU/
 - Comments in English
 - Every POU produces `.st` (code) + `.csv` (variables) files
 - CSV files are UTF-16LE encoded for GX Works 2 compatibility
+- Every variable in every POU CSV carries a descriptive English comment (derived from the ST code and AlarmManager.md); keep them in sync when editing code
 - Requires TimeControl V2 library for delay functionality
 - Consumes ~1,400 D registers and ~2,000 M registers from auto-assigned range

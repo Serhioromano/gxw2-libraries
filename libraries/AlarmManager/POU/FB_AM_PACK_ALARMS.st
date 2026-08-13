@@ -1,4 +1,4 @@
-iRegisters := AM_ALARMS_NUM / 16;
+iRegisters := c_AM_ALARMS_NUM / 16;
 
 iTCounter := 0;
 

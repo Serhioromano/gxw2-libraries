@@ -2,9 +2,7 @@
 
 ## Abstract
 
-This version of the Alarm Manager library introduces a revised storage model for alarm data. In previous versions, alarm states were packed into statically allocated device registers whose boundaries were fixed at initialization time. The present version employs a dynamic array-based storage scheme. While this approach incurs a modest increase in memory consumption, it enables the assignment of a configurable delay parameter to every alarm event, specified in increments of 100 ms.
-
-V204 introduces standardised POU naming: all function blocks are prefixed with `FB_`, functions with `F_`, structures with `ST_`, and global variable lists with `GVL_`. These prefixes are part of the POU names themselves and must be used in code when declaring instances or invoking functions.
+This version of the Alarm Manager library introduces a revised storage model for alarm data. In previous versions, alarm states were packed into statically allocated device registers whose boundaries were fixed at initialization time. The present version employs a dynamic array-based storage scheme. While this approach incurs a modest increase in memory consumption, it enables the assignment of a configurable delay parameter to every alarm event, specified in increments of 50 ms.
 
 ---
 
@@ -21,19 +19,6 @@ V204 introduces standardised POU naming: all function blocks are prefixed with `
 ## Roadmap
 
 - Addition of a dedicated system register for reporting internal library errors.
-
----
-
-## Changelog
-
-### V204 — 14 January 2026
-
-- **POU naming:** All POUs renamed with type prefixes: `AM_INIT` → `FB_AM_INIT`, `AM_SET` → `FB_AM_SET`, `AM_ISON` → `F_AM_ISON`, `AM_ORISON` → `FB_AM_ORISON`, `AM_RESET` → `FB_AM_RESET`, `AM_IS_BLOCK` → `FB_AM_IS_BLOCK`, `AM_HAS_ALARMS` → `FB_AM_HAS_ALARMS`, `AM_BUZZER` → `FB_AM_BUZZER`, `AM_EV` → `FB_AM_EV`, `AM_EVENT_RESET` → `FB_AM_EVENT_RESET`, `AM_PACK_ALARMS` → `FB_AM_PACK_ALARMS`, `AM_PACK_EVENTS` → `FB_AM_PACK_EVENTS`, `AM_DELAY_OUT` → `F_AM_DELAY_OUT`, `AM_MOVE_TO_M` → `F_AM_MOVE_TO_M`. Global variable list: `AM.csv` → `GVL_AM.csv`. Structure files: `AM_ALARM.csv` → `ST_AM_ALARM.csv`, `AM_EVENT.csv` → `ST_AM_EVENT.csv`.
-- **Cross-references:** Internal POU calls updated to use prefixed names.
-
-### V203 — 12 January 2026
-
-- **Optimisation:** The `FB_AM_SET` function block has been restructured to reduce code size. Internal timers have been migrated from the `M8012` system flag to the TimeControl library, yielding improved timing precision.
 
 ---
 
