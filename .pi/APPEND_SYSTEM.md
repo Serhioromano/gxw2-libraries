@@ -1,0 +1,6 @@
+- Whenever you edit POU files use `gwx2-st` skill. 
+- Always use English for comments
+- After edit any `.st` or `.csv` file update:
+  - `libraryname/CHANGELOG.md` - Changes applied
+  - `libraryname/README.md` - Descriptio of this library for AI agent who develop this library
+  - `libraryname/LibraryName.md` - Documentation for END users and AI agents who will build with this library. Use `lib-doc` SKILL to edit it.

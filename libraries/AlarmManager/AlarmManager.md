@@ -1,0 +1,547 @@
+# Alarm Manager V203 — Library for Coolmay FX3G PLC
+
+## Abstract
+
+This version of the Alarm Manager library introduces a revised storage model for alarm data. In previous versions, alarm states were packed into statically allocated device registers whose boundaries were fixed at initialization time. The present version employs a dynamic array-based storage scheme. While this approach incurs a modest increase in memory consumption, it enables the assignment of a configurable delay parameter to every alarm event, specified in increments of 100 ms.
+
+---
+
+## Prerequisites
+
+1. The library consumes **1,400** devices from the `D` register area and **2,000** devices from the `M` register area, drawn from the automatically assigned device range. The corresponding allocation limits in the GX Works 2 project settings must be increased accordingly.
+
+    ![Device Allocation Settings](./2025-12-31_16-27-28.png)
+
+2. The **TimeControl V2** library must be installed and configured for the delay functionality to operate correctly.
+
+---
+
+## Roadmap
+
+- Addition of a dedicated system register for reporting internal library errors.
+
+---
+
+## Changelog
+
+### V203 — 12 January 2026
+
+- **Optimisation:** The `AM_SET` function block has been restructured to reduce code size. Internal timers have been migrated from the `M8012` system flag to the TimeControl library, yielding improved timing precision.
+
+---
+
+## Terminology
+
+- **Alarm** — An object that stores a Boolean state (`TRUE` / `FALSE`) together with associated properties (severity, process group, delay, locking behaviour, latching mode, and buzzer activation). An alarm belongs to one of two severity classes: Warning or Error.
+- **Event** — A Boolean state flag (`TRUE` / `FALSE`) reserved for informational messaging. An event is always of type Message.
+- **Registering an alarm** — The transition of an alarm's state from `FALSE` to `TRUE`.
+
+---
+
+## Architectural Description
+
+The Alarm Manager library abstracts the registration, filtering, and querying of process alarms and events, thereby separating alarm-management logic from the core business logic of a POU (Program Organisation Unit). The recommended workflow proceeds as follows:
+
+1. **Initialisation:** All potential alarms are declared and configured once, at program startup.
+2. **Registration:** During each program scan, every alarm is evaluated against its associated condition; if the condition holds, the alarm is registered.
+3. **Querying:** Registered alarms may be retrieved and filtered by process number and severity, allowing process-control logic to respond appropriately without embedding low-level alarm-handling code.
+
+The library supports a maximum of **128 alarms**.
+
+---
+
+## Function Blocks and Functions
+
+| Name             | Type           | Description                                 |
+| ---------------- | -------------- | ------------------------------------------- |
+| `AM_INIT`        | Function Block | Initialise alarm properties                 |
+| `AM_SET`         | Function Block | Set the condition under which an alarm registers |
+| `AM_ISON`        | Function       | Test the state of a single alarm            |
+| `AM_ORISON`      | Function Block | Test the state of multiple alarms with logical OR |
+| `AM_RESET`       | Function Block | Reset all alarms                            |
+| `AM_IS_BLOCK`    | Function Block | Test for the presence of blocking alarms    |
+| `AM_HAS_ALARMS`  | Function Block | Test for the presence of any registered alarm |
+| `AM_BUZZER`      | Function Block | Test for alarms that trigger the buzzer     |
+| `AM_EVENT`       | Function Block | Create an event                             |
+| `AM_EVENT_RESET` | Function Block | Reset all latched events                    |
+| `AM_PACK_ALARMS` | Function Block | Pack alarm states bitwise into a device register |
+| `AM_PACK_EVENTS` | Function Block | Pack event states bitwise into a device register |
+
+---
+
+### `AM_INIT`
+
+This function block configures the properties of every alarm the application intends to use. It must be executed only once, at program start. It is recommended to invoke it under the control of the `M8002` initialisation pulse flag, or within a dedicated initialisation POU scheduled in a separate task.
+
+| Variable    | Scope  | Type | Description                                                   |
+| ----------- | ------ | ---- | ------------------------------------------------------------- |
+| `iNum`      | INPUT  | INT  | Alarm identifier. Range: `0` to `127`.                        |
+| `iSeverity` | INPUT  | INT  | Severity level of the alarm. See §Alarm Properties.           |
+| `iProcess`  | INPUT  | INT  | Process group identifier.                                     |
+| `iDelay`    | INPUT  | INT  | Delay before registration. Unit: `1 = 100 ms`.                |
+| `xLock`     | INPUT  | Bit  | Indicates whether this alarm should halt (lock) the process.  |
+| `xLatch`    | INPUT  | Bit  | Indicates whether this alarm is of the latching type.         |
+| `xBuzzer`   | INPUT  | Bit  | Indicates whether this alarm should activate the buzzer output. |
+
+#### Alarm Properties
+
+##### `iSeverity`
+
+The severity level assigns a weight to the alarm. The library itself does not differentiate alarm behaviour based on severity; the value is stored for subsequent filtering by the query function blocks. Severity may be expressed as a literal integer or via the following global constants:
+
+- `0` — Not set
+- `1` — Message (`AM_INFO`)
+- `2` — Warning (`AM_WARNING`)
+- `3` — Error (`AM_ERROR`)
+
+##### `iProcess`
+
+The process number serves as a grouping category for alarms. Any integer value is admissible. Consider a scenario in which a program controls two independent processes: if one process halts, the other should continue operating. By assigning distinct process numbers during initialisation, alarms may later be filtered by process group, allowing each process to react only to its own set of alarms.
+
+##### `iDelay`
+
+The delay parameter specifies a time interval, expressed in units of 100 ms, that the alarm condition must persist before the alarm is registered. A value of `0` disables the delay (immediate registration).
+
+##### `xLock`
+
+A locking alarm is one that, when registered, should cause the associated process to halt or enter a safe state. For example, in a gas-fired heating system, a flame-detection failure should close the gas valve. The "No Flame" alarm would be configured as locking, and the process-control logic would query for any active locking alarm and respond by securing the process.
+
+##### `xLatch`
+
+A latching alarm, once registered, remains active even after its triggering condition returns to `FALSE`. It must be cleared manually by an operator reset action. A non-latching alarm is automatically deregistered as soon as its condition becomes `FALSE`.
+
+##### `xBuzzer`
+
+Indicates whether this alarm should trigger the audible buzzer output.
+
+#### Example
+
+Declare the function block instance in the local label section of the POU:
+
+```iecst
+VAR
+    fbAMInit: AM_INIT;
+END_VAR
+```
+
+In the POU body, invoke the block once under the initialisation pulse:
+
+```iecst
+IF M8002 THEN
+    (* Pressure sensor on AD0 — communication lost *)
+    fbAMINIT(iNum := 0, iProcess := 1, iSeverity := AM_WARNING, iDelay := 2,
+        xLock := TRUE, xLatch := FALSE, xBuzzer := TRUE);
+
+    (* No-flame alarm on X10 input *)
+    fbAMINIT(iNum := 1, iProcess := 1, iSeverity := AM_ERROR, iDelay := 0,
+        xLock := TRUE, xLatch := TRUE, xBuzzer := TRUE);
+
+    AM_ALARMS_NUM := 2;
+END_IF
+```
+
+> **Note on `AM_ALARMS_NUM`:** This global variable must be set to the total number of alarms that were initialised. Its value constrains the iteration range when the library scans the internal `AM_ALARMS` array, which has a fixed capacity of 128 elements. Limiting the scan to the actually initialised entries avoids unnecessary computational overhead on unused slots.
+
+---
+
+### `AM_SET`
+
+This function block registers alarm conditions. It must be called on every program scan cycle.
+
+| Variable  | Scope | Type | Description                                      |
+| --------- | ----- | ---- | ------------------------------------------------ |
+| `iNum`    | INPUT | INT  | Alarm identifier. Range: `0` to `127`.           |
+| `xState`  | INPUT | Bit  | Boolean condition that triggers alarm registration. |
+
+#### Example
+
+Declare the instance:
+
+```iecst
+VAR
+    fbAMSet: AM_SET;
+END_VAR
+```
+
+Invoke in the POU body:
+
+```iecst
+fbAmSet(iNum := 0, xState := (D8030 = 32760));
+fbAmSet(iNum := 1, xState := (NOT X10));
+```
+
+---
+
+### `AM_ISON`
+
+This **function** (not function block) tests whether a single, specific alarm is currently registered. Although it requires the global alarm array to be passed as an argument, its function form allows it to be used directly within Boolean expressions without an intermediate storage variable.
+
+| Variable | Scope | Type | Description                                   |
+| -------- | ----- | ---- | --------------------------------------------- |
+| `ALMS`   | INPUT | INT  | Global variable: `AM_ALARMS`.                 |
+| `iNum`   | INPUT | INT  | Alarm identifier. Range: `0` to `127`.        |
+
+The need to pass the global array explicitly is an artefact of the IEC 61131-3 restriction that functions may not access global variables directly. This makes invocations slightly more verbose, but the trade-off is the ability to use the function inline within expressions.
+
+```iecst
+xErrorSensor := AM_ISON(AM_ALARMS, 0);
+
+IF AM_ISON(AM_ALARMS, 1) THEN
+    (* Respond to alarm 1 *)
+END_IF;
+```
+
+---
+
+### `AM_ORISON`
+
+This function block allows the state of several alarms to be combined under a logical OR operation. The result is accumulated in an `IN_OUT` variable that must be reset to `FALSE` before the first invocation in a chain.
+
+| Variable | Scope  | Type | Description             |
+| -------- | ------ | ---- | ----------------------- |
+| `iNum`   | INPUT  | INT  | Alarm identifier.       |
+| `Q`      | IN_OUT | Bit  | Accumulated OR result.  |
+
+#### Example
+
+Declare the instance:
+
+```iecst
+VAR
+    fbAMOrIsOn: AM_ORISON;
+    xResult: Bit;
+END_VAR
+```
+
+Invoke in the POU body:
+
+```iecst
+xResult := FALSE;
+fbAMOrIsOn(iNum := 0,  Q := xResult);
+fbAMOrIsOn(iNum := 5,  Q := xResult);
+fbAMOrIsOn(iNum := 11, Q := xResult);
+
+IF xResult THEN
+    (* At least one of alarms 0, 5, or 11 is active *)
+END_IF;
+```
+
+---
+
+### `AM_RESET`
+
+Resets all registered alarms. In certain configurations, a single-cycle reset pulse is too brief for the HMI to synchronise with the state change. This function block addresses the issue by holding the reset signal active for a fixed duration of **one second**.
+
+| Variable | Scope  | Type | Description                       |
+| -------- | ------ | ---- | --------------------------------- |
+| `IN`     | IN_OUT | Bit  | Reset command signal.             |
+
+#### Example
+
+Declare the instance:
+
+```iecst
+VAR
+    fbAMRst: AM_RESET;
+END_VAR
+```
+
+Invoke:
+
+```iecst
+fbAMRst(IN := xReset);
+```
+
+The `IN` parameter accepts a momentary pulse or a latched `SET` variable. After the one-second reset window elapses, the signal is automatically cleared.
+
+---
+
+### `AM_IS_BLOCK`
+
+Determines whether any registered alarm has its `xLock` property set to `TRUE`.
+
+| Variable      | Scope  | Type | Description                                                       |
+| ------------- | ------ | ---- | ----------------------------------------------------------------- |
+| `iProcessNum` | INPUT  | INT  | Process group filter. `0` = search all processes.                 |
+| `iSeverity`   | INPUT  | INT  | Severity filter. `0` = search all severity levels.                |
+| `Q`           | OUTPUT | Bit  | Result: `TRUE` if at least one blocking alarm is registered.      |
+| `AC`          | OUTPUT | INT  | Count of matching blocking alarms.                                |
+
+#### Example
+
+Declare the instance:
+
+```iecst
+VAR
+    fbAMBlock: AM_IS_BLOCK;
+END_VAR
+```
+
+**Case 1** — Any blocking alarm, regardless of process or severity:
+
+```iecst
+fbAMBlock();
+IF NOT fbAMBlock.Q THEN
+    (* No blocking alarm is active *)
+END_IF;
+```
+
+**Case 2** — Only blocking alarms of severity Error (`AM_ERROR`):
+
+```iecst
+fbAMBlock(iSeverity := AM_ERROR);
+IF NOT fbAMBlock.Q THEN
+    (* No blocking Error-level alarm is active *)
+END_IF;
+```
+
+---
+
+### `AM_HAS_ALARMS`
+
+Determines whether any alarm is currently registered, optionally filtered by process group or severity.
+
+| Variable      | Scope  | Type | Description                                                    |
+| ------------- | ------ | ---- | -------------------------------------------------------------- |
+| `iProcessNum` | INPUT  | INT  | Process group filter. `0` = search all processes.              |
+| `iSeverity`   | INPUT  | INT  | Severity filter. `0` = search all severity levels.             |
+| `Q`           | OUTPUT | Bit  | Result: `TRUE` if at least one matching alarm is registered.   |
+| `AC`          | OUTPUT | INT  | Count of matching alarms.                                      |
+
+#### Example
+
+Declare the instance:
+
+```iecst
+VAR
+    fbAMHas: AM_HAS_ALARMS;
+END_VAR
+```
+
+**Case 1** — Any registered alarm:
+
+```iecst
+fbAMHas();
+IF NOT fbAMHas.Q THEN
+    (* No alarms are active *)
+END_IF;
+```
+
+**Case 2** — Any Error-level alarm:
+
+```iecst
+fbAMHas(iSeverity := AM_ERROR);
+IF NOT fbAMHas.Q THEN
+    (* No Error-level alarm is active *)
+END_IF;
+```
+
+---
+
+### `AM_BUZZER`
+
+Determines whether any registered alarm has its `xBuzzer` property set to `TRUE`.
+
+| Variable | Scope  | Type | Description                                                        |
+| -------- | ------ | ---- | ------------------------------------------------------------------ |
+| `Q`      | OUTPUT | Bit  | Result. Emits a single pulse when the count of buzzing alarms increases. |
+| `AC`     | OUTPUT | INT  | Total number of alarms tagged for buzzer activation.               |
+| `RESET`  | INPUT  | Bit  | Input signal to silence the buzzer.                                |
+
+#### Example
+
+Declare the instance:
+
+```iecst
+VAR
+    fbAMBuzzer: AM_BUZZER;
+END_VAR
+```
+
+In the following example, `DO_Buzzer` denotes a physical PLC output wired to the buzzer, and `DI_BuzzerReset` denotes a physical PLC input wired to a silence button:
+
+```iecst
+fbAMBuzzer(RESET := DI_ButtonBuzzerReset, Q := DO_Buzzer);
+IF fbAMBuzzer.AC > 0 THEN
+    (* Alarms requiring buzzer are present, even if silenced *)
+END_IF;
+```
+
+---
+
+### `AM_PACK_ALARMS`
+
+Packs the state of every alarm, bit by bit, into a contiguous block of device registers. Many HMI panels natively consume alarms in this packed format.
+
+| Variable | Scope | Type | Description                                                       |
+| -------- | ----- | ---- | ----------------------------------------------------------------- |
+| `DNUM`   | INPUT | INT  | Starting device number for the packed data.                       |
+| `PD`     | INPUT | INT  | Target device area: `AM_PACK_D` for `D` registers, `AM_PACK_R` for `R` registers. |
+
+#### Example
+
+Declare the instance:
+
+```iecst
+VAR
+    fbAMPack: AM_PACK_ALARMS;
+END_VAR
+```
+
+Invoke:
+
+```iecst
+fbAMPack(DNUM := 3280, PD := AM_PACK_D);
+```
+
+All alarm states are written starting from `D3280`. The total number of devices consumed equals the value of `AM_ALARMS_NUM`: one 16-bit device for up to 16 alarms, two devices for up to 32 alarms, and so forth.
+
+To access individual alarm states from an HMI or external device:
+- `D3280.0` corresponds to alarm ID `0`
+- `D3280.F` corresponds to alarm ID `15`
+- `D3281.0` corresponds to alarm ID `16`
+- …
+- `D3287.F` corresponds to alarm ID `127`
+
+![Alarm Packing — D Register View](./2023-06-05_17-56-41.png)
+
+![Alarm Packing — Bit-Level View](./2023-06-05_18-00-31.png)
+
+#### HMI Compatibility Note
+
+Certain HMI models (e.g., the OP320A/S series) support alarm reads exclusively from `M` (bit) registers, not from `D` (word) registers. In such cases the `BMOV` instruction must be used to transfer the packed data:
+
+```iecst
+BMOV(TRUE, D3280, 1, K4M3000);
+```
+
+This copies the contents of `D3280` (one device) into the bit block starting at `M3000`. The third argument (`1`) must be adjusted to match the number of devices occupied by the packed alarm data.
+
+![OP320 HMI Configuration](./2025-01-10_12-12-29.png)
+
+---
+
+## Events
+
+Events are conceptually similar to alarms but carry fewer configurable properties. The primary motivation for separating events from alarms is the 32k-step program-size limit of the target platform: a unified alarm library supporting 256 entries, if fully populated, could consume approximately 20,000 program steps. Events handle informational signalling where the logic impact is minimal, thereby conserving program space.
+
+> **Platform note:** Coolmay HMI panels do not distinguish between alarms and events — both must be registered in the Alarm Manager widget. Third-party HMI panels typically maintain separate alarm and event tables.
+
+Events must be configured as type **Message** in the HMI:
+
+![Event Registration in HMI](./2023-06-05_17-56-41.png)
+
+![Event Configuration as Message Type](./2023-06-05_17-58-41.png)
+
+### Event Behaviour Types
+
+Two behavioural classes of events are supported:
+
+- **Positive Edge** — Events of this type automatically move from the active-events table to the history table after a brief timeout, even if the event was configured as latched.
+- **High Level** — Events of this type persist in the active-events table for as long as the event state remains `TRUE`. Once the state returns to `FALSE`, the event remains in the history table but is removed from the active list.
+
+![Event Behaviour Configuration](./2023-06-05_18-06-30.png)
+
+---
+
+### `AM_EVENT`
+
+Creates a new event entry.
+
+| Variable     | Scope | Type | Description                              |
+| ------------ | ----- | ---- | ---------------------------------------- |
+| `EventNum`   | INPUT | INT  | Event identifier.                        |
+| `EventState` | INPUT | Bit  | Current state of the event condition.    |
+| `EventLatch` | INPUT | Bit  | Indicates whether the event is latched.  |
+
+All events whose state is `TRUE` appear in both the current-alarms table (index 4) and the alarm-history table (index 3). **Positive Edge** events disappear from the current-alarms table after a short interval; **High Level** events remain in the current-alarms table until their state becomes `FALSE`. After deactivation, a High Level event persists only in the history table.
+
+![Event Lifecycle in HMI](./2023-06-05_18-08-31.png)
+
+#### Example
+
+Declare the instance:
+
+```iecst
+VAR
+    fbAMEvent: AM_EVENT;
+END_VAR
+```
+
+Invoke in the POU body:
+
+```iecst
+(* Button-start activated *)
+fbAMEvent(EventNum := 0, EventState := X0);
+(* Button-start deactivated *)
+fbAMEvent(EventNum := 2, EventState := NOT X0);
+(* Water pump running *)
+fbAMEvent(EventNum := 3, EventState := Y0);
+```
+
+---
+
+### `AM_EVENT_RESET`
+
+Resets all event states. This function block is required only when latched events are in use; non-latched events clear themselves automatically upon state deactivation.
+
+| Variable | Scope  | Type | Description                    |
+| -------- | ------ | ---- | ------------------------------ |
+| `IN`     | IN_OUT | Bit  | Reset command signal.          |
+
+The `IN` parameter is automatically cleared after **one second**.
+
+#### Example
+
+Declare the instance:
+
+```iecst
+VAR
+    fbAMEventReset: AM_EVENT_RESET;
+END_VAR
+```
+
+Invoke:
+
+```iecst
+fbAMEventReset(IN := xReset);
+```
+
+---
+
+### `AM_PACK_EVENTS`
+
+Packs the state of every event, bit by bit, into a contiguous block of device registers, in the same manner as `AM_PACK_ALARMS`.
+
+| Variable | Scope | Type | Description                                                       |
+| -------- | ----- | ---- | ----------------------------------------------------------------- |
+| `DNUM`   | INPUT | INT  | Starting device number for the packed data.                       |
+| `PD`     | INPUT | INT  | Target device area: `AM_PACK_D` for `D` registers, `AM_PACK_R` for `R` registers. |
+
+#### Example
+
+Declare the instance:
+
+```iecst
+VAR
+    fbAMPackE: AM_PACK_EVENTS;
+END_VAR
+```
+
+Invoke:
+
+```iecst
+fbAMPackE(DNUM := 3304, PD := AM_PACK_D);
+```
+
+All event states are written starting from `D3304`. The total number of devices consumed equals the value of `AM_EVENTS_NUM`: one device for up to 16 events, two devices for up to 32, and so on.
+
+To access event states from an HMI, read `D3304` through `D3312`. Each register stores the states of 16 events in a bit-packed format:
+
+- `D3304.0` — event ID `0`
+- `D3304.1` — event ID `1`
+- …
+- `D3304.F` — event ID `15`
+- `D3305.0` — event ID `16`
+
+![Event Packing — Bit-Level View](./2023-06-05_18-00-31.png)
