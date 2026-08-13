@@ -23,7 +23,7 @@ This version of the Alarm Manager library introduces a user-defined storage mode
 
 2. **Memory consumption is proportional to the declared array sizes.** The maximum configuration (128 alarms, 128 events) consumes approximately **1,400** devices from the `D` register area and **2,000** devices from the `M` register area, drawn from the automatically assigned device range; smaller arrays consume proportionally less. The allocation limits in the GX Works 2 project settings must be increased accordingly.
 
-    ![Device Allocation Settings](./2025-12-31_16-27-28.png)
+    ![Device Allocation Settings](./img/2025-12-31_16-27-28.png)
 
 3. The **TimeControl V2** library must be installed and configured for the delay functionality to operate correctly.
 
@@ -389,9 +389,9 @@ To access individual alarm states from an HMI or external device:
 - …
 - `D3287.F` corresponds to alarm ID `127`
 
-![Alarm Packing — D Register View](./2023-06-05_17-56-41.png)
+![Alarm Packing — D Register View](./img/2023-06-05_17-56-41.png)
 
-![Alarm Packing — Bit-Level View](./2023-06-05_18-00-31.png)
+![Alarm Packing — Bit-Level View](./img/2023-06-05_18-00-31.png)
 
 #### HMI Compatibility Note
 
@@ -403,7 +403,7 @@ BMOV(TRUE, D3280, 1, K4M3000);
 
 This copies the contents of `D3280` (one device) into the bit block starting at `M3000`. The third argument (`1`) must be adjusted to match the number of devices occupied by the packed alarm data.
 
-![OP320 HMI Configuration](./2025-01-10_12-12-29.png)
+![OP320 HMI Configuration](./img/2025-01-10_12-12-29.png)
 
 ---
 
@@ -449,9 +449,9 @@ Events are conceptually similar to alarms but carry fewer configurable propertie
 
 Events must be configured as type **Message** in the HMI:
 
-![Event Registration in HMI](./2023-06-05_17-56-41.png)
+![Event Registration in HMI](./img/2023-06-05_17-56-41.png)
 
-![Event Configuration as Message Type](./2023-06-05_17-58-41.png)
+![Event Configuration as Message Type](./img/2023-06-05_17-58-41.png)
 
 ### Event Behaviour Types
 
@@ -460,7 +460,7 @@ Two behavioural classes of events are supported:
 - **Positive Edge** — Events of this type automatically move from the active-events table to the history table after a brief timeout, even if the event was configured as latched.
 - **High Level** — Events of this type persist in the active-events table for as long as the event state remains `TRUE`. Once the state returns to `FALSE`, the event remains in the history table but is removed from the active list.
 
-![Event Behaviour Configuration](./2023-06-05_18-06-30.png)
+![Event Behaviour Configuration](./img/2023-06-05_18-06-30.png)
 
 ---
 
@@ -476,7 +476,7 @@ Creates a new event entry.
 
 All events whose state is `TRUE` appear in both the current-alarms table (index 4) and the alarm-history table (index 3). **Positive Edge** events disappear from the current-alarms table after a short interval; **High Level** events remain in the current-alarms table until their state becomes `FALSE`. After deactivation, a High Level event persists only in the history table.
 
-![Event Lifecycle in HMI](./2023-06-05_18-08-31.png)
+![Event Lifecycle in HMI](./img/2023-06-05_18-08-31.png)
 
 #### Example
 
@@ -566,7 +566,7 @@ To access event states from an HMI, read `D3304` through `D3312`. Each register 
 - `D3304.F` — event ID `15`
 - `D3305.0` — event ID `16`
 
-![Event Packing — Bit-Level View](./2023-06-05_18-00-31.png)
+![Event Packing — Bit-Level View](./img/2023-06-05_18-00-31.png)
 
 ---
 
