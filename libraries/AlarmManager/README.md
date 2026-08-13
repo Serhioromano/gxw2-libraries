@@ -19,7 +19,7 @@ POU/
 ├── FB_AM_RESET.st / .csv  — Reset all alarms; holds reset pulse for 1 second
 ├── FB_AM_IS_BLOCK.st / .csv — Check for blocking (lock=TRUE) alarms, optionally filtered
 ├── FB_AM_HAS_ALARMS.st / .csv — Check for any registered alarm, optionally filtered
-├── FB_AM_BUZZER.st / .csv — Check for buzzer-tagged alarms; emits pulse on count increase
+├── FB_AM_BUZZER.st / .csv — Check for buzzer-tagged alarms; latches output on count increase until Reset
 ├── FB_AM_EV.st / .csv     — Create/register an event with optional latch
 ├── FB_AM_EVENT_RESET.st / .csv — Reset all latched events; holds pulse for 1 second
 ├── FB_AM_PACK_ALARMS.st / .csv — Pack alarm bits into D/R registers or M devices

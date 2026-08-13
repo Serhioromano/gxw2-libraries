@@ -1,4 +1,4 @@
-# AlarmManager V211 — Library for Coolmay FX3G PLC
+# AlarmManager V212 — Library for Coolmay FX3G PLC
 
 ## Abstract
 
@@ -327,7 +327,7 @@ Determines whether any registered alarm has its `xBuzzer` property set to `TRUE`
 
 | Variable | Scope | Type | Description |
 | -------- | ----- | ---- | ----------- |
-| `Q` | OUTPUT | BOOL | Result. Emits a single pulse when the count of buzzing alarms increases. |
+| `Q` | OUTPUT | BOOL | Result. Latches ON when the count of buzzing alarms increases; cleared by `Reset`. |
 | `AC` | OUTPUT | INT | Total number of alarms tagged for buzzer activation. |
 | `Reset` | IN_OUT | BOOL | Input signal to silence the buzzer. |
 
@@ -344,7 +344,7 @@ END_VAR
 In the following example, `DO_Buzzer` denotes a physical PLC output wired to the buzzer, and `DI_BuzzerReset` denotes a physical PLC input wired to a silence button:
 
 ```iecst
-fbAMBuzzer(Reset := DI_ButtonBuzzerReset, Q => DO_Buzzer);
+fbAMBuzzer(Reset := DI_ButtonBuzzerReset, Q := DO_Buzzer);
 IF fbAMBuzzer.AC > 0 THEN
     (* Alarms requiring buzzer are present, even if silenced *)
 END_IF;

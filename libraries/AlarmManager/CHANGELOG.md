@@ -1,5 +1,11 @@
 # Changelog
 
+## V212 — 2026-08-13
+
+- **Comments:** Added a header (POU purpose and I/O mapping) and inline comments to `FB_AM_BUZZER.st` explaining the count scan, the edge latch on `Q`, and the one-scan `Reset` pulse. No logic changed.
+- **CSV:** Corrected the `Q` output comment in `FB_AM_BUZZER.csv` — `Q` is latched until `Reset`, not a single pulse.
+- **Documentation:** Fixed the `FB_AM_BUZZER` description and example in `AlarmManager.md` (`Q` latches until `Reset`; ST call uses `:=` for the output) and the `FB_AM_BUZZER` summary line in `README.md`.
+
 ## V211 — 2026-08-13
 
 - **Removed:** The `F_AM_MOVE_TO_M` function (files `F_AM_MOVE_TO_M.st` / `.csv` deleted). It wrapped the `BMOV` instruction to copy packed `D` data to `M` bits; since V209 the pack blocks (`FB_AM_PACK_ALARMS`, `FB_AM_PACK_EVENTS`) write directly to the `M` area with `PD := c_AM_PACK_M`, so the helper is no longer needed. Applications that still pack to `D` registers can use the raw `BMOV` instruction (see the HMI Compatibility Note in `FB_AM_PACK_ALARMS`).
