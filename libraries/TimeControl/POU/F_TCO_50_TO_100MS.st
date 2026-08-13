@@ -1,0 +1,2 @@
+DDIV(TICKER > 2, TICKER, 2, tmp);
+TCO_50_TO_100MS := SEL(TICKER > 2, 0, tmp[0]);

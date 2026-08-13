@@ -1,0 +1,2 @@
+DDIV(TICKER > 20, TICKER, 20, tmp);
+TCO_50_TO_MIN := SEL(TICKER > 20, 0, DINT_TO_INT(tmp[0]));

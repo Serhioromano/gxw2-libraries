@@ -1,0 +1,1 @@
+iCounter := D8010 + iCounter;
