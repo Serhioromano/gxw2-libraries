@@ -1,11 +1,13 @@
-AM_EVENTS[EventNum].State := EventState;
-IF (NOT EventLatch) OR (EventLatch AND AM_EVENTS[EventNum].State AND NOT AM_EVENTS[EventNum].StateM) THEN
-	AM_EVENTS[EventNum].Event := TRUE;
-END_IF;
-AM_EVENTS[EventNum].StateM := AM_EVENTS[EventNum].State;
+iEN := LIMITATION(0, EventNum, c_AM_EVENTS_NUM);
 
-IF (NOT EventLatch AND NOT AM_EVENTS[EventNum].State) THEN
-	AM_EVENTS[EventNum].Event := FALSE;
-END_IF;
+EVENT := AM_EVENTS[iEN];
 
+EVENT.State := EventState;
+SET(EVENT.State, EVENT.Event);
+RST(EVENT.Event
+	AND NOT EventLatch
+	AND NOT EventState, 
+	EVENT.Event
+);
 
+AM_EVENTS[iEN] := EVENT;

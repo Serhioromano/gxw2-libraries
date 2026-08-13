@@ -1,3 +1,5 @@
+iAN := LIMITATION(0, iNum, c_AM_ALARMS_NUM);
+
 AM_ALARMS[iNum].Buzzer := xBuzzer;
 AM_ALARMS[iNum].Latch := xLatch;
 AM_ALARMS[iNum].Lock := xLock;

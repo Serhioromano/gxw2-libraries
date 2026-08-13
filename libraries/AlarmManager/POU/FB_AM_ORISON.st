@@ -1,1 +1,3 @@
-Q := Q OR AM_ALARMS[iNum].Alarm;
+iAN := LIMITATION(0, iNum, c_AM_ALARMS_NUM);
+
+Q := Q OR AM_ALARMS[iAN].Alarm;

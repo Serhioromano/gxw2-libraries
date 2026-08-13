@@ -1,4 +1,6 @@
-ALARM := AM_ALARMS[iNum];
+iAN := LIMITATION(0, iNum, c_AM_ALARMS_NUM);
+
+ALARM := AM_ALARMS[iAN];
 ALARM.State := xState;
 
 DMOV(
@@ -30,4 +32,4 @@ RST(
 
 ALARM.StateM := ALARM.State;
 
-AM_ALARMS[iNum] := ALARM;
+AM_ALARMS[iAN] := ALARM;
