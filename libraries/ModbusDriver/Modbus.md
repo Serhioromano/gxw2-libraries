@@ -2,7 +2,7 @@
 
 ## Abstract
 
-The Modbus RTU Driver enables a Coolmay FX3G PLC to operate as a Modbus RTU master or slave on the two auxiliary RS485 ports (port 2 and port 3). Version V1.6 is a documentation-only release: it documents the `MTB_SLAVE_PORT2` / `MTB_SLAVE_PORT3` port-reconfiguration functions, adds a consolidated global-constants reference, and adds descriptive comments to every variable declaration in the POU CSV files.
+The Modbus RTU Driver enables a Coolmay FX3G PLC to operate as a Modbus RTU master or slave on the two auxiliary RS485 ports (port 2 and port 3). Version V6 is a documentation-only release: it documents the `MTB_SLAVE_PORT2` / `MTB_SLAVE_PORT3` port-reconfiguration functions, adds a consolidated global-constants reference, and adds descriptive comments to every variable declaration in the POU CSV files.
 
 ## Terminology
 
@@ -14,48 +14,13 @@ The Modbus RTU Driver enables a Coolmay FX3G PLC to operate as a Modbus RTU mast
 
 The following libraries must be installed in the project prior to using this driver:
 
-- `UtilsV4.sul`
-- `TimeControlV2.sul`
+- `Utils.sul`
+- `TimeControl.sul`
 
 > [!IMPORTANT]
 >
 > - The TimeControl V2 library must be installed and the `TCO_TICKER_50` ticker must be configured. This ticker advances at **50 ms** intervals and is required by the `MB_PROCESS_50` function block.
 > - This library is compatible with **GX Works 2 v1.91** and later. Updates are available from the `coolmay/soft` directory.
-
----
-
-## Changelog
-
-### V1.6 — 13 August 2026
-
-- **Documented:** `MTB_SLAVE_PORT2` / `MTB_SLAVE_PORT3` port-reconfiguration functions and the global constants (`MB_READ`, `MB_PORT_*`, parity, stop-bit and baud-rate selectors).
-- **Improved:** Added descriptive comments to every variable in the POU CSV files.
-
-### V1.5 — 9 April 2025
-
-- **Added:** `xWriteOnce` property for channels.
-
-### V1.4 — 9 April 2025
-
-- **Added:** Automatic clearing of all registers allocated for data storage prior to the first read cycle.
-- **Added:** `xDone` property for channels. Emits a pulse upon completion of one read/write cycle.
-
-### V1.3 — 28 February 2025
-
-- **Fixed:** Bug in which the connection was not restored after a timeout. (Reported by Alex_315.)
-
-### V1.2 — 12 December 2024
-
-- **Changed:** The `iReg` property of a channel now accepts `Word[Unsigned]` / `Bit String[16-bit]` types, enabling register addresses greater than 32,000.
-- **Added:** Port constants `MB_PORT_2`, `MB_PORT_3`, `MB_PORT_CAN`, and `MB_PORT_TCP` for the `iPort` channel property.
-
-### V1.1 — 29 September 2024
-
-- **Changed:** Device area for data storage switched from `R` to `D` registers, because certain HMI panels (e.g., the OP320 series) do not expose `R` registers over the Modbus protocol.
-
-### V1.0 — 22 September 2024
-
-- Initial release.
 
 ---
 

@@ -1,3 +1,21 @@
+(*
+b0 Data length 0: 7 bits 1: 8 bits
+b1 b2 Parity (b2,b1) 00: None; 01: Odd; 11: Even
+b3 Stop bit 0:1 bit 1: 2 bits
+
+b4 b5 b6 b7 Baud rate (b7,b6,b5,b4)
+(0100):600bps (0101):1200bps (0110):2400bps
+(0111):4800bps (1000):9600bps (1001):19200bps
+(1010):38400bps (1011):57600bps (1101):115200bps
+
+b8 b9 b10 b11 Set 0
+
+b12 0 - RTU, 1 - ASCII
+b13 Set 1
+b14 Set 1
+b15 Set 1
+*)
+
 temp := DSRB(temp, 0, TRUE); 
 temp := DSRB(temp, 13, TRUE);
 temp := DSRB(temp, 14, TRUE);
