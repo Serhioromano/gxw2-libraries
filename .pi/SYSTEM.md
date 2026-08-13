@@ -51,7 +51,13 @@ libraries/
 
 - **Platform:** Mitsubishi FX series in GX Works 2 only.
 - **Languages:** Structured Text (ST) with GX Works 2 CSV Label Editor files.
-- **POU naming:** `FB_<Name>`, `F_<Name>`, `PRG_<Name>` (ALL-CAPS prefix).
+- **POU naming prefixes:**
+  - `F_` — Functions
+  - `FB_` — Function blocks
+  - `ST_` — Structures
+  - `GVL_` — Global variable lists
+  - `PRG_` — Programs
+  - All prefixes are ALL-CAPS, e.g. `FB_<Name>`, `F_<Name>`.
 - **FB instances:** CamelCase with prefix — `fbMotor : FB_MOTOR`.
 - **Every POU produces two files:** `<POU>.st` (code) + `<POU>.csv` (variables).
 - **Device addresses:** X, Y, M, D, T, C, Z, V, R (Mitsubishi only).

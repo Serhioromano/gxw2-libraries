@@ -13,7 +13,7 @@ DMOV(
 SET(
 	NOT ALARM.Alarm
 	AND ALARM.State
-	AND AM_DELAY_OUT(
+	AND F_AM_DELAY_OUT(
 		ALARM.TimerStart, 
 		TCO_DINT_50, 
 		ALARM.Delay

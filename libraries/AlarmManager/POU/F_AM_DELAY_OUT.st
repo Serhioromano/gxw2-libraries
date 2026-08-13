@@ -1,1 +1,1 @@
-AM_DELAY_OUT := Delay <= 0 OR DWORD_TO_INT(TCO_50_DIFF(StartTime, CurTime)) >= Delay;
+F_AM_DELAY_OUT := Delay <= 0 OR DWORD_TO_INT(TCO_50_DIFF(StartTime, CurTime)) >= Delay;
