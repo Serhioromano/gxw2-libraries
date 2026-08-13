@@ -9,7 +9,7 @@ ModbusDriver is a Structured Text library for Mitsubishi FX series PLCs (GX Work
 ```
 POU/
 ├── GVL_MB.csv                     — Global constants (access modes, parity, stop bits, baud rates, ports) and timeout globals
-├── GVL_MB_TEST.csv                — Test-project globals: user-declared channel storage (MB_CHANNELS + c_MB_CHANNELS_NUM)
+├── GVL_MB_TEST.csv                — Test-project globals: channel storage (MB_CHANNELS + c_MB_CHANNELS_NUM) and demo value labels (g_iAutoReg*, g_iDemandReg*, g_xCoil*)
 ├── ST_MB_REG_50.csv               — MB_REG_50 struct definition (per-channel configuration)
 ├── MB_PORT_SETTINGS.st / .csv     — Function: build the D8120/D8400 port bit-field from parity/stop/baud inputs
 ├── MB_MASTER_INIT_PORT2.st / .csv — Function: initialise Modbus master on port 2
@@ -90,4 +90,10 @@ The application must declare the channel storage in its own global label list, s
 
 ## Test Program (PRG_MB_TEST)
 
-`PRG_MB_TEST` is a compile-and-run example: it enables interrupts, builds a port bit-field via `MB_PORT_SETTINGS`, initialises the master on port 2 under the `M8002`/`M1` pulse, configures channel 0 (read/write of 6 holding registers from device 1), sets the timeout globals, and calls `fbMbProcess` every scan. The channel storage (`MB_CHANNELS`, `c_MB_CHANNELS_NUM`) is declared in `GVL_MB_TEST.csv` (3 channels). It also copies four test registers (`reg1`–`reg4`) into local labels for monitoring.
+`PRG_MB_TEST` is a compile-and-run example that covers all three channel kinds. It enables interrupts, builds a port bit-field via `MB_PORT_SETTINGS`, and initialises the master on ports 2 and 3 (re-triggered every second by the `M8013` clock). Under the `M8002` pulse it sets the timeout globals and configures three channels:
+
+- **Channel 0** — register, automatic read/write (device 1, port 2, `tCycle = 20`).
+- **Channel 1** — register, read-only, on demand (device 2, port 3, `tCycle = 0`, read via `xReadOnce`).
+- **Channel 2** — coils, read/write (device 3, port 2, `tCycle = 10`).
+
+It calls `fbMbProcess` every scan and demonstrates an on-demand read (channel 1) and write-on-change (channels 0 and 2). Channel storage (`MB_CHANNELS`, `c_MB_CHANNELS_NUM`) and the demo value labels (`g_iAutoReg*`, `g_iDemandReg*`, `g_xCoil*`) are declared in `GVL_MB_TEST.csv`.

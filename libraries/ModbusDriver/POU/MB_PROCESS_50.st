@@ -72,7 +72,7 @@ CASE imbStep OF
 			AND (
 				(
 					MB_CHANNELS[iCount].iTimeOut >= MB_TIMEOUT_COUNT
-					AND DWORD_TO_INT(TCO_50_DIFF(MB_CHANNELS[iCount].tStart, TCO_DINT_50)) >= MB_SUSPEND_RETRY
+					AND DWORD_TO_INT(F_TCO_50_DIFF(MB_CHANNELS[iCount].tStart, TCO_DINT_50)) >= MB_SUSPEND_RETRY
 				)
 				OR
 				(
@@ -84,7 +84,7 @@ CASE imbStep OF
 						(
 							MB_CHANNELS[iCount].xWriteOnChange = FALSE
 							AND MB_CHANNELS[iCount].tCycle > 0
-							AND DWORD_TO_INT(TCO_50_DIFF(MB_CHANNELS[iCount].tStart, TCO_DINT_50)) >= MB_CHANNELS[iCount].tCycle
+							AND DWORD_TO_INT(F_TCO_50_DIFF(MB_CHANNELS[iCount].tStart, TCO_DINT_50)) >= MB_CHANNELS[iCount].tCycle
 						)
 					)
 				)
@@ -154,14 +154,14 @@ CASE imbStep OF
 				(
 					MB_CHANNELS[iCount].tCycle > 0
 					AND MB_CHANNELS[iCount].iTimeOut >= MB_TIMEOUT_COUNT
-					AND DWORD_TO_INT(TCO_50_DIFF(MB_CHANNELS[iCount].tStart, TCO_DINT_50)) >= MB_SUSPEND_RETRY
+					AND DWORD_TO_INT(F_TCO_50_DIFF(MB_CHANNELS[iCount].tStart, TCO_DINT_50)) >= MB_SUSPEND_RETRY
 				)
 				OR
 				(* In a normal mode read every tCycle *)
 				(
 					MB_CHANNELS[iCount].tCycle > 0
 					AND MB_CHANNELS[iCount].iTimeOut < MB_TIMEOUT_COUNT
-					AND DWORD_TO_INT(TCO_50_DIFF(MB_CHANNELS[iCount].tStart, TCO_DINT_50)) >= MB_CHANNELS[iCount].tCycle
+					AND DWORD_TO_INT(F_TCO_50_DIFF(MB_CHANNELS[iCount].tStart, TCO_DINT_50)) >= MB_CHANNELS[iCount].tCycle
 				)
 				OR
 				(* Manual read once *)
