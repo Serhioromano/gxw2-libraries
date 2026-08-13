@@ -1,8 +1,8 @@
-# AlarmManager V206 — Library for Coolmay FX3G PLC
+# AlarmManager V207 — Library for Coolmay FX3G PLC
 
 ## Abstract
 
-This version of the Alarm Manager library introduces a user-defined storage model. Alarm and event storage is no longer reserved by the library: the application declares the storage arrays in the project's global label list and sizes them to its actual requirements. The array capacities are compile-time constants with the `c_` prefix — `c_AM_ALARMS_NUM` and `c_AM_EVENTS_NUM`. Memory consumption is therefore proportional to the number of alarms and events actually used, instead of a fixed 128-element reservation. The library retains the array-based storage scheme introduced in V204, which enables a configurable delay parameter for every alarm event, specified in increments of 50 ms.
+This version of the Alarm Manager library introduces a user-defined storage model. Alarm and event storage is no longer reserved by the library: the application declares the storage arrays in the project's global label list and sizes them to its actual requirements. The array capacities are compile-time constants with the `c_` prefix — `c_AM_ALARMS_NUM` and `c_AM_EVENTS_NUM`. Memory consumption is therefore proportional to the number of alarms and events actually used, instead of a fixed 128-element reservation. The library retains the array-based storage scheme introduced in V204, which enables a configurable delay parameter for every alarm event, specified in increments of 50 ms. In V207 the `F_AM_ISON` helper function was removed; the state of a single alarm is now read directly from the global array as `AM_ALARMS[iNum].Alarm`, which is possible in programs and function blocks (the function form was only needed because IEC functions cannot access global variables).
 
 ---
 
@@ -62,7 +62,6 @@ The library supports a maximum of **128 alarms** (the fixed array bounds of the 
 | ---- | ---- | ----------- |
 | `FB_AM_INIT` | Function Block | Initialise alarm properties |
 | `FB_AM_SET` | Function Block | Set the condition under which an alarm registers |
-| `F_AM_ISON` | Function | Test the state of a single alarm |
 | `FB_AM_ORISON` | Function Block | Test the state of multiple alarms with logical OR |
 | `FB_AM_RESET` | Function Block | Reset all alarms |
 | `FB_AM_IS_BLOCK` | Function Block | Test for the presence of blocking alarms |
@@ -178,30 +177,9 @@ fbAMSet(iNum := 1, xState := (NOT X10));
 
 ---
 
-### `F_AM_ISON`
-
-This **function** (not function block) tests whether a single, specific alarm is currently registered. Although it requires the alarm array to be passed as an argument, its function form allows it to be used directly within Boolean expressions without an intermediate storage variable.
-
-| Variable | Scope | Type | Description |
-| -------- | ----- | ---- | ----------- |
-| `ALMS` | INPUT | ARRAY [0..127] OF AM_ALARM | Application-declared global variable: `AM_ALARMS`. |
-| `iNum` | INPUT | INT | Alarm identifier. Range: `0` to `c_AM_ALARMS_NUM`. |
-
-The need to pass the array explicitly is an artefact of the IEC 61131-3 restriction that functions may not access global variables directly. This makes invocations slightly more verbose, but the trade-off is the ability to use the function inline within expressions. The parameter is declared with the maximum bound of `127`; the array actually passed is the application-declared `AM_ALARMS` (bound `c_AM_ALARMS_NUM` ≤ 127). The caller must ensure that `iNum` never exceeds `c_AM_ALARMS_NUM`.
-
-```iecst
-xErrorSensor := F_AM_ISON(AM_ALARMS, 0);
-
-IF F_AM_ISON(AM_ALARMS, 1) THEN
-    (* Respond to alarm 1 *)
-END_IF;
-```
-
----
-
 ### `FB_AM_ORISON`
 
-This function block allows the state of several alarms to be combined under a logical OR operation. The result is accumulated in an `IN_OUT` variable that must be reset to `FALSE` before the first invocation in a chain.
+This function block allows the state of several alarms to be combined under a logical OR operation. Each call ORs the state of one alarm — read directly from the global array as `AM_ALARMS[iNum].Alarm` — into an accumulator. The result is accumulated in an `IN_OUT` variable that must be reset to `FALSE` before the first invocation in a chain. The state of a single alarm can also be read directly as `AM_ALARMS[iNum].Alarm` in any program or function block; the `F_AM_ISON` function was removed in V207.
 
 | Variable | Scope | Type | Description |
 | -------- | ----- | ---- | ----------- |
@@ -594,4 +572,4 @@ To access event states from an HMI, read `D3304` through `D3312`. Each register 
 
 ## Test Program
 
-The library ships a compile-and-run smoke test, `PRG_AM_TEST`, that registers three alarms and exercises every alarm function block (initialisation, registration, querying, reset, buzzer, and packing). The test declares its storage in the global label list `GVL_AM_TEST.csv` exactly as described in Prerequisites, with `c_AM_ALARMS_NUM = 15` (16 alarm slots — the minimum multiple of 16 required for safe packing). Manual condition inputs are bound to `M10`..`M12`, the reset input to `M200`; results can be monitored at `M100`.. and `D10`.. in the GX Works 2 device monitor. The test is maintained in `POU/PRG_AM_TEST.st` / `.csv` and `POU/GVL_AM_TEST.csv`.
+The library ships a compile-and-run smoke test, `PRG_AM_TEST`, that registers three alarms and exercises every alarm function block (initialisation, registration, querying, reset, buzzer, and packing). The test declares its storage in the global label list `GVL_AM_TEST.csv` exactly as described in Prerequisites, with `c_AM_ALARMS_NUM = 15` (16 alarm slots — the minimum multiple of 16 required for safe packing). All test labels are auto-assigned by the compiler (no explicit device bindings); force the condition inputs (`xCondAlarm0..2`, `xReset`) and watch the result labels in the GX Works 2 device monitor. The test is maintained in `POU/PRG_AM_TEST.st` / `.csv` and `POU/GVL_AM_TEST.csv`.

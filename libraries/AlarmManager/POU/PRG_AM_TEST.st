@@ -3,13 +3,14 @@
 
   Registers three alarms (IDs 0..2) under manual test inputs and exercises
   every alarm function block of the library:
-    FB_AM_INIT / FB_AM_SET / F_AM_ISON / FB_AM_ORISON / FB_AM_RESET
+    FB_AM_INIT / FB_AM_SET / FB_AM_ORISON / FB_AM_RESET
     FB_AM_HAS_ALARMS / FB_AM_IS_BLOCK / FB_AM_BUZZER / FB_AM_PACK_ALARMS
 
   Storage (AM_ALARMS, AM_EVENTS) and capacity constants
   (c_AM_ALARMS_NUM, c_AM_EVENTS_NUM) are declared globally in GVL_AM_TEST
-  per the user-defined storage model. Watch the bound labels (M10.., D10..)
-  in the device monitor while forcing the condition inputs.
+  per the user-defined storage model. All test labels are auto-assigned by
+  the compiler; force the condition inputs and watch the result labels in
+  the device monitor.
 *)
 
 (* One-time alarm configuration on the initial pulse *)
@@ -27,10 +28,10 @@ fbAMSet(iNum := 0, xState := xCondAlarm0);
 fbAMSet(iNum := 1, xState := xCondAlarm1);
 fbAMSet(iNum := 2, xState := xCondAlarm2);
 
-(* Single-alarm state queries *)
-xIsOn0 := F_AM_ISON(AM_ALARMS, 0);
-xIsOn1 := F_AM_ISON(AM_ALARMS, 1);
-xIsOn2 := F_AM_ISON(AM_ALARMS, 2);
+(* Single-alarm state queries - direct array access *)
+xIsOn0 := AM_ALARMS[0].Alarm;
+xIsOn1 := AM_ALARMS[1].Alarm;
+xIsOn2 := AM_ALARMS[2].Alarm;
 
 (* OR-combined query: alarm 0 OR alarm 2 *)
 xOrIsOn := FALSE;

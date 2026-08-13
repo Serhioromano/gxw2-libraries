@@ -15,7 +15,6 @@ POU/
 ├── ST_AM_EVENT.csv        — AM_EVENT struct definition (state, stateM, event)
 ├── FB_AM_INIT.st / .csv   — Initialise a single alarm's properties; called once at startup
 ├── FB_AM_SET.st / .csv    — Evaluate and register an alarm condition; called every scan
-├── F_AM_ISON.st / .csv    — Function: check if a specific alarm is active
 ├── FB_AM_ORISON.st / .csv — Function Block: OR-combine multiple alarm states into an accumulator
 ├── FB_AM_RESET.st / .csv  — Reset all alarms; holds reset pulse for 1 second
 ├── FB_AM_IS_BLOCK.st / .csv — Check for blocking (lock=TRUE) alarms, optionally filtered
@@ -58,13 +57,13 @@ The scan loops use `c_AM_ALARMS_NUM` / `c_AM_EVENTS_NUM` as the upper bound. `FB
 
 ## Test Program (PRG_AM_TEST)
 
-`PRG_AM_TEST` is a compile-and-run smoke test that registers three alarms and exercises every alarm FB of the library (init, set, is-on, or-is-on, reset, has-alarms, is-block, buzzer, pack). It belongs to the `compiler` project and requires the storage declared in `GVL_AM_TEST.csv`. Manual condition inputs are bound to `M10`..`M12`, the reset input to `M200`; results can be watched at `M100`.. and `D10`.. in the device monitor.
+`PRG_AM_TEST` is a compile-and-run smoke test that registers three alarms and exercises every alarm FB of the library (init, set, is-on, or-is-on, reset, has-alarms, is-block, buzzer, pack). It belongs to the `compiler` project and requires the storage declared in `GVL_AM_TEST.csv`. All test labels are auto-assigned by the compiler (no explicit device bindings); force the condition inputs (`xCondAlarm0..2`, `xReset`) and watch the result labels in the device monitor.
 
 ## POU Naming
 
 | Prefix | Type | Files |
 |---|---|---|
-| `F_` | Function | F_AM_DELAY_OUT, F_AM_ISON, F_AM_MOVE_TO_M |
+| `F_` | Function | F_AM_DELAY_OUT, F_AM_MOVE_TO_M |
 | `FB_` | Function Block | FB_AM_BUZZER, FB_AM_EV, FB_AM_EVENT_RESET, FB_AM_HAS_ALARMS, FB_AM_INIT, FB_AM_IS_BLOCK, FB_AM_ORISON, FB_AM_PACK_ALARMS, FB_AM_PACK_EVENTS, FB_AM_RESET, FB_AM_SET |
 | `ST_` | Structure | ST_AM_ALARM, ST_AM_EVENT |
 | `GVL_` | Global Variable List | GVL_AM |
