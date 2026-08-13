@@ -4,11 +4,13 @@
 
 AlarmManager is a Structured Text library for Mitsubishi FX series PLCs (GX Works 2) that provides alarm and event management: registration, filtering, packing, buzzer control, and HMI integration.
 
+The library does not reserve alarm/event storage. The application declares the storage arrays and the capacity constants in its project's global label list, sized to its actual requirements (see User Requirements below).
+
 ## File Structure
 
 ```
 POU/
-├── GVL_AM.csv             — Global variables and constants (severity levels, arrays, counters, pack targets)
+├── GVL_AM.csv             — Global constants (severity levels, pack targets); alarm/event storage is declared by the application (see User Requirements)
 ├── ST_AM_ALARM.csv        — AM_ALARM struct definition (latch, lock, buzzer, alarm, state, delay, severity, process, timerStart)
 ├── ST_AM_EVENT.csv        — AM_EVENT struct definition (state, stateM, event)
 ├── FB_AM_INIT.st / .csv   — Initialise a single alarm's properties; called once at startup
@@ -25,21 +27,38 @@ POU/
 ├── FB_AM_PACK_EVENTS.st / .csv — Pack event bits into D/R registers
 ├── F_AM_DELAY_OUT.st / .csv — Function: delay output using TimeControl
 ├── F_AM_MOVE_TO_M.st / .csv — Function: BMOV wrapper for HMI bit-register transfer
+├── GVL_AM_TEST.csv        — Test-project global labels: user-declared storage (arrays + capacity constants) for PRG_AM_TEST
+└── PRG_AM_TEST.st / .csv  — Test program: smoke test that compiles and runs every library FB
 ```
 
 ## Global Variables (GVL_AM.csv)
+
+The library GVL declares constants only. Alarm/event storage is **not** part of the library — see User Requirements below.
 
 | Variable | Purpose |
 |---|---|
 | `c_AM_ERROR` (const 3) | Severity constant for Error-level alarms |
 | `c_AM_WARNING` (const 2) | Severity constant for Warning-level alarms |
 | `c_AM_INFO` (const 1) | Severity constant for Info/Message-level alarms |
-| `AM_ALARMS` | Global array `[0..127]` of `AM_ALARM` structs |
-| `AM_EVENTS` | Global array `[0..127]` of `AM_EVENT` structs |
-| `AM_ALARMS_NUM` | Count of initialized alarms; controls scan range |
-| `AM_EVENTS_NUM` | Count of initialized events; controls scan range |
 | `c_AM_PACK_D` (const 0) | Pack target: D registers |
 | `c_AM_PACK_R` (const 1) | Pack target: R registers |
+
+## User Requirements (declared by the application)
+
+The application must declare the storage in its project's global label list, sized to its needs. The library code references these labels directly; without them the project does not compile.
+
+| Label | Class | Type |
+|---|---|---|
+| `c_AM_ALARMS_NUM` | `VAR_GLOBAL_CONSTANT` | INT — upper bound of `AM_ALARMS` (max 127) |
+| `c_AM_EVENTS_NUM` | `VAR_GLOBAL_CONSTANT` | INT — upper bound of `AM_EVENTS` (max 127) |
+| `AM_ALARMS` | `VAR_GLOBAL` | `ARRAY [0..c_AM_ALARMS_NUM] OF AM_ALARM` |
+| `AM_EVENTS` | `VAR_GLOBAL` | `ARRAY [0..c_AM_EVENTS_NUM] OF AM_EVENT` |
+
+The scan loops use `c_AM_ALARMS_NUM` / `c_AM_EVENTS_NUM` as the upper bound. `FB_AM_PACK_ALARMS` / `FB_AM_PACK_EVENTS` require an array length that is a multiple of 16 (upper bound 15, 31, 47, … 127).
+
+## Test Program (PRG_AM_TEST)
+
+`PRG_AM_TEST` is a compile-and-run smoke test that registers three alarms and exercises every alarm FB of the library (init, set, is-on, or-is-on, reset, has-alarms, is-block, buzzer, pack). It belongs to the `compiler` project and requires the storage declared in `GVL_AM_TEST.csv`. Manual condition inputs are bound to `M10`..`M12`, the reset input to `M200`; results can be watched at `M100`.. and `D10`.. in the device monitor.
 
 ## POU Naming
 
@@ -55,9 +74,10 @@ POU/
 - FB instances use CamelCase with `fb` prefix: `fbAMInit : FB_AM_INIT`
 - F instances use bare call: `result := F_AM_DELAY_OUT(...)`
 - Startup logic in `FB_AM_INIT` uses `M8002` pulse — set in program/task settings, not guarded in code
+- Storage arrays (`AM_ALARMS`, `AM_EVENTS`) and capacity constants (`c_AM_ALARMS_NUM`, `c_AM_EVENTS_NUM`) are user requirements declared in the project's global label list — not part of `GVL_AM.csv`
 - Comments in English
 - Every POU produces `.st` (code) + `.csv` (variables) files
 - CSV files are UTF-16LE encoded for GX Works 2 compatibility
 - Every variable in every POU CSV carries a descriptive English comment (derived from the ST code and AlarmManager.md); keep them in sync when editing code
 - Requires TimeControl V2 library for delay functionality
-- Consumes ~1,400 D registers and ~2,000 M registers from auto-assigned range
+- Consumes ~1,400 D registers and ~2,000 M registers from the auto-assigned range in the maximum configuration (128 alarms + 128 events); less with smaller user-declared arrays

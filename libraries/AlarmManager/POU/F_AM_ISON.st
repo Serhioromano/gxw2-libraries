@@ -1,1 +1,1 @@
-Q := Q OR F_AM_ISON(AM_ALARMS, iNum);
+F_AM_ISON := ALMS[iNum].Alarm;

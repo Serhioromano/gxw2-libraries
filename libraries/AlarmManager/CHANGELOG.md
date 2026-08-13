@@ -1,5 +1,14 @@
 # Changelog
 
+## V206 — 2026-08-13
+
+- **Storage model:** Alarm/event storage is no longer reserved by the library. Removed `AM_ALARMS`, `AM_EVENTS`, `AM_ALARMS_NUM`, `AM_EVENTS_NUM` from `GVL_AM.csv`. The application must now declare these in its project's global label list, sized to its requirements: the arrays `AM_ALARMS` / `AM_EVENTS` and the compile-time capacity constants `c_AM_ALARMS_NUM` / `c_AM_EVENTS_NUM` (with the `c_` prefix, per the V203 convention).
+- **Code:** Event scan loops in `FB_AM_EVENT_RESET.st` and `FB_AM_PACK_EVENTS.st` now use `c_AM_EVENTS_NUM` (was `AM_EVENTS_NUM`) for symmetry with the alarm constants.
+- **F_AM_ISON:** Fixed the return assignment: `F_AM_ISON := ALMS[iNum].Alarm;` (the function name was missing the `F_` prefix).
+- **CSV comments:** Updated range/array comments in `FB_AM_INIT.csv`, `FB_AM_SET.csv`, `FB_AM_EV.csv`, `FB_AM_PACK_EVENTS.csv`, `F_AM_ISON.csv` to reference the capacity constants.
+- **Documentation:** Rewrote the Prerequisites section of `AlarmManager.md` (user-declared storage requirements), updated affected FB sections, and updated `README.md`.
+- **Test program:** Reworked `PRG_AM_TEST` so it compiles and runs against the V206 library: storage moved from program-local rows into the new global list `GVL_AM_TEST.csv` (`VAR_GLOBAL` / `VAR_GLOBAL_CONSTANT`), stale names updated (`FB_AM_RST` → `FB_AM_RESET`, `FB_AM_PACK` → `FB_AM_PACK_ALARMS`, `AM_WARNING`/`AM_ERROR` → `c_AM_*`), alarm array sized to 16 slots (`c_AM_ALARMS_NUM = 15`) so `FB_AM_PACK_ALARMS` stays in bounds, `BMOV` count corrected from 8 to 1, raw devices replaced with commented device-bound labels, and `fbAMOsIsOn` renamed to `fbAMOrIsOn`.
+
 ## V205 — 2026-08-13
 
 - **Comments:** Added descriptive English comments to every variable in all POU CSV files (`FB_AM_*.csv`, `F_AM_*.csv`, `ST_AM_*.csv`, `GVL_AM.csv`). Comments were derived from the ST code and the AlarmManager documentation; no variable names, types, or logic changed.

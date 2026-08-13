@@ -1,4 +1,4 @@
-iRegisters := AM_EVENTS_NUM / 16;
+iRegisters := c_AM_EVENTS_NUM / 16;
 
 iTCounter := 0;
 FOR iCount := 0 TO iRegisters DO

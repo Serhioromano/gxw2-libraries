@@ -1,18 +1,31 @@
-# AlarmManager V204 — Library for Coolmay FX3G PLC
+# AlarmManager V206 — Library for Coolmay FX3G PLC
 
 ## Abstract
 
-This version of the Alarm Manager library introduces a revised storage model for alarm data. In previous versions, alarm states were packed into statically allocated device registers whose boundaries were fixed at initialization time. The present version employs a dynamic array-based storage scheme. While this approach incurs a modest increase in memory consumption, it enables the assignment of a configurable delay parameter to every alarm event, specified in increments of 50 ms.
+This version of the Alarm Manager library introduces a user-defined storage model. Alarm and event storage is no longer reserved by the library: the application declares the storage arrays in the project's global label list and sizes them to its actual requirements. The array capacities are compile-time constants with the `c_` prefix — `c_AM_ALARMS_NUM` and `c_AM_EVENTS_NUM`. Memory consumption is therefore proportional to the number of alarms and events actually used, instead of a fixed 128-element reservation. The library retains the array-based storage scheme introduced in V204, which enables a configurable delay parameter for every alarm event, specified in increments of 50 ms.
 
 ---
 
 ## Prerequisites
 
-1. The library consumes **1,400** devices from the `D` register area and **2,000** devices from the `M` register area, drawn from the automatically assigned device range. The corresponding allocation limits in the GX Works 2 project settings must be increased accordingly.
+1. **Declare the alarm and event storage in the project's global label list.** The library no longer reserves storage for alarms and events. The following labels must be declared by the application in the project's global label list (they are **not** part of the library):
+
+    | Label | Class | Type | Description |
+    | ----- | ----- | ---- | ----------- |
+    | `c_AM_ALARMS_NUM` | `VAR_GLOBAL_CONSTANT` | INT | Upper bound of the `AM_ALARMS` array. Determines the number of alarm slots: alarms `0` to `c_AM_ALARMS_NUM`. Maximum: `127`. |
+    | `c_AM_EVENTS_NUM` | `VAR_GLOBAL_CONSTANT` | INT | Upper bound of the `AM_EVENTS` array. Determines the number of event slots: events `0` to `c_AM_EVENTS_NUM`. Maximum: `127`. |
+    | `AM_ALARMS` | `VAR_GLOBAL` | ARRAY [0..c_AM_ALARMS_NUM] OF AM_ALARM | Storage for the alarm objects. |
+    | `AM_EVENTS` | `VAR_GLOBAL` | ARRAY [0..c_AM_EVENTS_NUM] OF AM_EVENT | Storage for the event objects. |
+
+    Size the arrays to the number of alarms and events the application actually uses. The library scans the declared range (`0` to `c_AM_ALARMS_NUM` / `c_AM_EVENTS_NUM`) on every relevant call; an oversized array wastes both memory and scan time.
+
+    In the GX Works 2 Label Editor the constants are entered with the class `VAR_GLOBAL_CONSTANT` and their value in the **Constant** column. If the Label Editor does not accept a constant label inside an array bound, enter the numeric bound in both places and keep them equal, for example `c_AM_ALARMS_NUM = 9` and `AM_ALARMS : ARRAY [0..9] OF AM_ALARM`.
+
+2. **Memory consumption is proportional to the declared array sizes.** The maximum configuration (128 alarms, 128 events) consumes approximately **1,400** devices from the `D` register area and **2,000** devices from the `M` register area, drawn from the automatically assigned device range; smaller arrays consume proportionally less. The allocation limits in the GX Works 2 project settings must be increased accordingly.
 
     ![Device Allocation Settings](./2025-12-31_16-27-28.png)
 
-2. The **TimeControl V2** library must be installed and configured for the delay functionality to operate correctly.
+3. The **TimeControl V2** library must be installed and configured for the delay functionality to operate correctly.
 
 ---
 
@@ -27,6 +40,7 @@ This version of the Alarm Manager library introduces a revised storage model for
 - **Alarm** — An object that stores a Boolean state (`TRUE` / `FALSE`) together with associated properties (severity, process group, delay, locking behaviour, latching mode, and buzzer activation). An alarm belongs to one of two severity classes: Warning or Error.
 - **Event** — A Boolean state flag (`TRUE` / `FALSE`) reserved for informational messaging. An event is always of type Message.
 - **Registering an alarm** — The transition of an alarm's state from `FALSE` to `TRUE`.
+- **Capacity constant** — A compile-time constant (`c_AM_ALARMS_NUM`, `c_AM_EVENTS_NUM`) declared by the application. It defines the upper bound of the alarm or event storage array.
 
 ---
 
@@ -38,7 +52,7 @@ The Alarm Manager library abstracts the registration, filtering, and querying of
 2. **Registration:** During each program scan, every alarm is evaluated against its associated condition; if the condition holds, the alarm is registered.
 3. **Querying:** Registered alarms may be retrieved and filtered by process number and severity, allowing process-control logic to respond appropriately without embedding low-level alarm-handling code.
 
-The library supports a maximum of **128 alarms**.
+The library supports a maximum of **128 alarms** (the fixed array bounds of the library functions). The actual number of alarm and event slots is determined by the application-declared constants `c_AM_ALARMS_NUM` and `c_AM_EVENTS_NUM`.
 
 ---
 
@@ -69,7 +83,7 @@ This function block configures the properties of every alarm the application int
 
 | Variable | Scope | Type | Description |
 | -------- | ----- | ---- | ----------- |
-| `iNum` | INPUT | INT | Alarm identifier. Range: `0` to `127`. |
+| `iNum` | INPUT | INT | Alarm identifier. Range: `0` to `c_AM_ALARMS_NUM`. |
 | `iSeverity` | INPUT | INT | Severity level of the alarm. See §Alarm Properties. |
 | `iProcess` | INPUT | INT | Process group identifier. |
 | `iDelay` | INPUT | INT | Delay before registration. Unit: `1 = 100 ms`. |
@@ -129,12 +143,10 @@ IF M8002 THEN
     (* No-flame alarm on X10 input *)
     fbAMInit(iNum := 1, iProcess := 1, iSeverity := c_AM_ERROR, iDelay := 0,
         xLock := TRUE, xLatch := TRUE, xBuzzer := TRUE);
-
-    AM_ALARMS_NUM := 2;
 END_IF;
 ```
 
-> **Note on `AM_ALARMS_NUM`:** This global variable must be set to the total number of alarms that were initialised. Its value constrains the iteration range when the library scans the internal `AM_ALARMS` array, which has a fixed capacity of 128 elements. Limiting the scan to the actually initialised entries avoids unnecessary computational overhead on unused slots.
+> **Note on `c_AM_ALARMS_NUM`:** This is a compile-time constant declared by the application in the project's global label list (see Prerequisites), not a runtime variable. It defines the upper bound of the `AM_ALARMS` array and therefore the number of alarm slots available. It must not be assigned in the POU body. The example above assumes `c_AM_ALARMS_NUM = 1`, i.e. an array `AM_ALARMS : ARRAY [0..1] OF AM_ALARM` providing two alarm slots.
 
 ---
 
@@ -144,7 +156,7 @@ This function block registers alarm conditions. It must be called on every progr
 
 | Variable | Scope | Type | Description |
 | -------- | ----- | ---- | ----------- |
-| `iNum` | INPUT | INT | Alarm identifier. Range: `0` to `127`. |
+| `iNum` | INPUT | INT | Alarm identifier. Range: `0` to `c_AM_ALARMS_NUM`. |
 | `xState` | INPUT | BOOL | Boolean condition that triggers alarm registration. |
 
 #### Example
@@ -168,14 +180,14 @@ fbAMSet(iNum := 1, xState := (NOT X10));
 
 ### `F_AM_ISON`
 
-This **function** (not function block) tests whether a single, specific alarm is currently registered. Although it requires the global alarm array to be passed as an argument, its function form allows it to be used directly within Boolean expressions without an intermediate storage variable.
+This **function** (not function block) tests whether a single, specific alarm is currently registered. Although it requires the alarm array to be passed as an argument, its function form allows it to be used directly within Boolean expressions without an intermediate storage variable.
 
 | Variable | Scope | Type | Description |
 | -------- | ----- | ---- | ----------- |
-| `ALMS` | INPUT | ARRAY [0..127] OF AM_ALARM | Global variable: `AM_ALARMS`. |
-| `iNum` | INPUT | INT | Alarm identifier. Range: `0` to `127`. |
+| `ALMS` | INPUT | ARRAY [0..127] OF AM_ALARM | Application-declared global variable: `AM_ALARMS`. |
+| `iNum` | INPUT | INT | Alarm identifier. Range: `0` to `c_AM_ALARMS_NUM`. |
 
-The need to pass the global array explicitly is an artefact of the IEC 61131-3 restriction that functions may not access global variables directly. This makes invocations slightly more verbose, but the trade-off is the ability to use the function inline within expressions.
+The need to pass the array explicitly is an artefact of the IEC 61131-3 restriction that functions may not access global variables directly. This makes invocations slightly more verbose, but the trade-off is the ability to use the function inline within expressions. The parameter is declared with the maximum bound of `127`; the array actually passed is the application-declared `AM_ALARMS` (bound `c_AM_ALARMS_NUM` ≤ 127). The caller must ensure that `iNum` never exceeds `c_AM_ALARMS_NUM`.
 
 ```iecst
 xErrorSensor := F_AM_ISON(AM_ALARMS, 0);
@@ -388,7 +400,9 @@ Invoke:
 fbAMPack(DNUM := 3280, PD := c_AM_PACK_D);
 ```
 
-All alarm states are written starting from `D3280`. The total number of devices consumed equals the value of `AM_ALARMS_NUM`: one 16-bit device for up to 16 alarms, two devices for up to 32 alarms, and so forth.
+All alarm states are written starting from `D3280`. The number of devices consumed equals `c_AM_ALARMS_NUM / 16 + 1`: one 16-bit device for up to 16 alarms, two devices for up to 32, and so forth.
+
+> **Note:** The pack function block reads alarm states in blocks of 16. To stay within the declared array, the array length (`c_AM_ALARMS_NUM + 1`) must be a multiple of 16 — i.e. `c_AM_ALARMS_NUM` must be one of `15, 31, 47, 63, 79, 95, 111, 127`. This matches the fixed 128-element arrays of earlier versions when packing is required.
 
 To access individual alarm states from an HMI or external device:
 - `D3280.0` corresponds to alarm ID `0`
@@ -478,7 +492,7 @@ Creates a new event entry.
 
 | Variable | Scope | Type | Description |
 | -------- | ----- | ---- | ----------- |
-| `EventNum` | INPUT | INT | Event identifier. |
+| `EventNum` | INPUT | INT | Event identifier. Range: `0` to `c_AM_EVENTS_NUM`. |
 | `EventState` | INPUT | BOOL | Current state of the event condition. |
 | `EventLatch` | INPUT | BOOL | Indicates whether the event is latched. |
 
@@ -562,7 +576,9 @@ Invoke:
 fbAMPackE(DNUM := 3304, PD := c_AM_PACK_D);
 ```
 
-All event states are written starting from `D3304`. The total number of devices consumed equals the value of `AM_EVENTS_NUM`: one device for up to 16 events, two devices for up to 32, and so on.
+All event states are written starting from `D3304`. The number of devices consumed equals `c_AM_EVENTS_NUM / 16 + 1`: one device for up to 16 events, two devices for up to 32, and so on.
+
+> **Note:** The same multiple-of-16 constraint as for `FB_AM_PACK_ALARMS` applies: the event array length (`c_AM_EVENTS_NUM + 1`) must be a multiple of 16 when packing is used.
 
 To access event states from an HMI, read `D3304` through `D3312`. Each register stores the states of 16 events in a bit-packed format:
 
@@ -573,3 +589,9 @@ To access event states from an HMI, read `D3304` through `D3312`. Each register 
 - `D3305.0` — event ID `16`
 
 ![Event Packing — Bit-Level View](./2023-06-05_18-00-31.png)
+
+---
+
+## Test Program
+
+The library ships a compile-and-run smoke test, `PRG_AM_TEST`, that registers three alarms and exercises every alarm function block (initialisation, registration, querying, reset, buzzer, and packing). The test declares its storage in the global label list `GVL_AM_TEST.csv` exactly as described in Prerequisites, with `c_AM_ALARMS_NUM = 15` (16 alarm slots — the minimum multiple of 16 required for safe packing). Manual condition inputs are bound to `M10`..`M12`, the reset input to `M200`; results can be monitored at `M100`.. and `D10`.. in the GX Works 2 device monitor. The test is maintained in `POU/PRG_AM_TEST.st` / `.csv` and `POU/GVL_AM_TEST.csv`.
