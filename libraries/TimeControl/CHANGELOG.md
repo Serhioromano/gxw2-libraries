@@ -1,5 +1,18 @@
 # Changelog
 
+## V5 — 2026-08-13
+
+- **Fixed:** `FB_TCO10` rewritten. It is now an elapsed-time accumulator based on `D8010` (current scan time in 0.1 ms units) with a `xReset` BOOL input that holds the accumulator at 0 while TRUE, a `diMs` DINT output (elapsed time in milliseconds, `diTicks / 10`) and a `di01ms` DINT output (elapsed time in raw 0.1 ms units). The old body (`iCounter := D8010 + iCounter`) accumulated into a 16-bit INT with no reset and no typed output; the CSV gained `xReset`, `diMs`, `di01ms` and the `wScan`/`diTicks` locals.
+- **Caveat:** the FB measures elapsed time by summing the scan time each scan — it approximates wall-clock time and misses time spent in interrupt tasks. It is an alternative to the interrupt-driven `PRG_TCO_TICKER_10`/`TCO_DINT_10` ticker for projects without interrupt tasks.
+- **Documentation:** added `FB_TCO10` to the summary table and a detail section in `TimeControl.md`; updated the file-structure entry in `README.md`.
+
+## V4 — 2026-08-13
+
+- **Feature:** Added `F_MIN_TO_SEC` — converts minutes to seconds; returns INT. Formula: `iMinutes * 60` (computed in DINT, converted to INT). Input: `iMinutes` (INT).
+- **Feature:** Added `F_TCO_50_TO_TIME` — converts a 50 ms ticker value to `TIME` (milliseconds); returns TIME. Formula: `dwTicker * 50`. Input: `dwTicker` (DWORD).
+- **Test program:** `PRG_TEST_TCO_50` now also exercises `F_TCO_50_TO_TIME` (`t3`) and `F_MIN_TO_SEC` (`ii4`); the CSV gained the `t3` TIME and `ii4` INT labels.
+- **Documentation:** Added both functions to the summary table and detail sections of `TimeControl.md`; updated the file structure in `README.md`.
+
 ## V3 — 2026-08-13
 
 - **Naming:** All functions now use the `F_` prefix consistently in code:

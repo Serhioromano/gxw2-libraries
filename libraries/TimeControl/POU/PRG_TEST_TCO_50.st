@@ -6,9 +6,11 @@ ii1 := F_TCO_50_TO_SEC(TCO_DINT_50);
 ii2 := F_TCO_50_TO_100MS(TCO_DINT_50);
 ii3 := F_TCO_50_TO_MIN(TCO_DINT_50);
 di1 := F_TCO_50_TO_MS(TCO_DINT_50);
+t3 := F_TCO_50_TO_TIME(TCO_DINT_50);
 
 dui1 := F_SEC_TO_TCO_50(50);
 dui2 := F_MIN_TO_TCO_50(10);
+ii4 := F_MIN_TO_SEC(5);
 
 dwDiff := F_TCO_50_DIFF(dwStart, TCO_DINT_50);
 

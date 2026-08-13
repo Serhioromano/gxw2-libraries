@@ -62,12 +62,15 @@ All conversion functions take the ticker value (`TCO_DINT_50` or `TCO_DINT_10`) 
 | Name | Type | Description |
 |------|------|-------------|
 | `FB_TCO_50_BLINK` | Function Block | Blink timer: toggles the output between LOW and HIGH phases using the 50 ms ticker |
+| `FB_TCO10` | Function Block | Elapsed-time accumulator (0.1 ms resolution) from the scan time — ms and raw 0.1 ms outputs |
 | `F_TCO_50_DIFF` | Function | Elapsed tick count between a saved and the current ticker value (wrap-safe) |
 | `F_TCO_50_TO_SEC` | Function | Convert 50 ms tick count to seconds (INT) |
 | `F_TCO_50_TO_100MS` | Function | Convert 50 ms tick count to 100 ms units (INT) |
 | `F_TCO_50_TO_MIN` | Function | Convert 50 ms tick count to minutes (INT) |
 | `F_TCO_50_TO_MS` | Function | Convert 50 ms tick count to milliseconds (DINT) |
+| `F_TCO_50_TO_TIME` | Function | Convert 50 ms tick count to TIME (milliseconds) |
 | `F_MIN_TO_TCO_50` | Function | Convert minutes to 50 ms tick count (DWORD) |
+| `F_MIN_TO_SEC` | Function | Convert minutes to seconds (INT) |
 | `F_SEC_TO_TCO_50` | Function | Convert seconds to 50 ms tick count (DWORD) |
 | `F_MIN_TO_TIME` | Function | Convert minutes to TIME (milliseconds) |
 | `F_SEC_TO_TIME` | Function | Convert seconds to TIME (milliseconds) |
@@ -78,9 +81,9 @@ All conversion functions take the ticker value (`TCO_DINT_50` or `TCO_DINT_10`) 
 
 ## TCO Conversion Functions
 
-### `F_TCO_50_TO_SEC`, `F_TCO_50_TO_100MS`, `F_TCO_50_TO_MIN`, `F_TCO_50_TO_MS`
+### `F_TCO_50_TO_SEC`, `F_TCO_50_TO_100MS`, `F_TCO_50_TO_MIN`, `F_TCO_50_TO_MS`, `F_TCO_50_TO_TIME`
 
-These functions convert a 50 ms ticker value into seconds, 100 ms units, minutes or milliseconds.
+These functions convert a 50 ms ticker value into seconds, 100 ms units, minutes, milliseconds or a `TIME` value.
 
 #### `F_TCO_50_TO_SEC`
 
@@ -138,6 +141,20 @@ Return type: **DINT** (set in POU properties). Range: overflows after ~24.8 days
 diCurrentMs := F_TCO_50_TO_MS(TCO_DINT_50);
 ```
 
+#### `F_TCO_50_TO_TIME`
+
+Returns the tick count as a `TIME` value in milliseconds: `ticks * 50`.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `dwTicker` | INPUT | DWORD | Time measured in 50 ms intervals |
+
+Return type: **TIME** (set in POU properties). Range: overflows after ~24.8 days of ticker value (same limit as `F_TCO_50_TO_MS`).
+
+```iecst
+tCurrent := F_TCO_50_TO_TIME(TCO_DINT_50);
+```
+
 ### `F_MIN_TO_TCO_50`, `F_SEC_TO_TCO_50`
 
 Convert minutes or seconds into a 50 ms tick count (for use as `TIMELOW`/`TIMEHIGH` durations or delay values).
@@ -164,6 +181,20 @@ Return type: **DWORD** (set in POU properties). Formula: `iSeconds * 20`.
 
 ```iecst
 dwTenSeconds := F_SEC_TO_TCO_50(10);
+```
+
+### `F_MIN_TO_SEC`
+
+Converts minutes into seconds.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `iMinutes` | INPUT | INT | Number of minutes |
+
+Return type: **INT** (set in POU properties). Formula: `iMinutes * 60` (computed in DINT, converted to INT). Range: input limited to ~546 minutes before the INT result overflows.
+
+```iecst
+iFiveMinutes := F_MIN_TO_SEC(5);  (* 300 *)
 ```
 
 ### `F_MIN_TO_TIME`, `F_SEC_TO_TIME`
@@ -248,6 +279,32 @@ Y1 := NOT Y0;   (* one day motor one, next day motor two *)
 ```
 
 This example rotates two motors on 24-hour intervals while `X0` is ON.
+
+### `FB_TCO10`
+
+Elapsed-time accumulator with 0.1 ms resolution. Every scan the block adds the current scan time (special register `D8010`, in 0.1 ms units) to an internal accumulator, so the outputs report the time elapsed since the last reset. Call it every scan in the main program.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `xReset` | INPUT | BOOL | Reset: holds the elapsed time at 0 while TRUE |
+| `diMs` | OUTPUT | DINT | Elapsed time since last reset, in milliseconds |
+| `di01ms` | OUTPUT | DINT | Elapsed time since last reset, in raw 0.1 ms units |
+
+Declare the function block instance in the local label section of the POU:
+
+```iecst
+VAR
+    fbTco10 : FB_TCO10;
+END_VAR
+```
+
+In the POU body, invoke the block every scan:
+
+```iecst
+fbTco10(xReset := X10, diMs := diRunTimeMs, di01ms := diRunTime01ms);
+```
+
+> **Note:** `FB_TCO10` approximates wall-clock time by summing the scan time; it does not include time spent in interrupt tasks. For accurate timing in projects that use interrupt tasks, prefer the ticker globals `TCO_DINT_50`/`TCO_DINT_10` with the conversion functions instead.
 
 ---
 
