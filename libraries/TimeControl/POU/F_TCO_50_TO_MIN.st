@@ -1,2 +1,4 @@
-(* Convert 50 ms ticker count to minutes: ticks / 1200 *)
-F_TCO_50_TO_MIN := DINT_TO_INT(DWORD_TO_DINT(dwTicker) / 1200);
+(* Convert 50 ms ticker count to minutes: ticks / 1200.
+   DDIV works on the raw DWORD value, keeping the full ticker range. *)
+DDIV(TRUE, dwTicker, 1200, dwQuot);
+F_TCO_50_TO_MIN := DINT_TO_INT(dwQuot[0]);

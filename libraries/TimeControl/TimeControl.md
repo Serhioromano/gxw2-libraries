@@ -85,6 +85,8 @@ All conversion functions take the ticker value (`TCO_DINT_50` or `TCO_DINT_10`) 
 
 These functions convert a 50 ms ticker value into seconds, 100 ms units, minutes, milliseconds or a `TIME` value.
 
+> **Arithmetic note:** the ticker is kept as a raw `DWORD` and the conversion is done with the 32-bit arithmetic instructions (`DDIV` for division, `DMUL` for multiplication). Native ST operators (`+`, `/`) do not work on `DWORD` in GX Works 2, and converting the ticker to `DINT` would corrupt values above 2³¹ (losing half the range). The computation is therefore correct for the full `DWORD` ticker range (~6.8 years at 50 ms). The range figures given per function below are **output** limits of the return type, not computation limits.
+
 #### `F_TCO_50_TO_SEC`
 
 Returns the number of full seconds in the tick count: `ticks / 20`.
@@ -93,7 +95,7 @@ Returns the number of full seconds in the tick count: `ticks / 20`.
 |----------|-------|------|-------------|
 | `dwTicker` | INPUT | DWORD | Time measured in 50 ms intervals |
 
-Return type: **INT** (set in POU properties). Range: overflows after ~9.1 hours of ticker value. Example:
+Return type: **INT** (set in POU properties). Output range: overflows after ~9.1 hours of ticker value. Example:
 
 ```iecst
 iCurrentSeconds := F_TCO_50_TO_SEC(TCO_DINT_50);
@@ -107,7 +109,7 @@ Returns the number of full 100 ms units in the tick count: `ticks / 2`.
 |----------|-------|------|-------------|
 | `dwTicker` | INPUT | DWORD | Time measured in 50 ms intervals |
 
-Return type: **INT** (set in POU properties). Range: overflows after ~55 minutes of ticker value.
+Return type: **INT** (set in POU properties). Output range: overflows after ~55 minutes of ticker value.
 
 ```iecst
 iCurrent100ms := F_TCO_50_TO_100MS(TCO_DINT_50);
@@ -121,7 +123,7 @@ Returns the number of full minutes in the tick count: `ticks / 1200`.
 |----------|-------|------|-------------|
 | `dwTicker` | INPUT | DWORD | Time measured in 50 ms intervals |
 
-Return type: **INT** (set in POU properties). Range: overflows after ~22.7 days of ticker value.
+Return type: **INT** (set in POU properties). Output range: overflows after ~22.7 days of ticker value.
 
 ```iecst
 iCurrentMinutes := F_TCO_50_TO_MIN(TCO_DINT_50);
@@ -135,7 +137,7 @@ Returns the tick count in milliseconds: `ticks * 50`.
 |----------|-------|------|-------------|
 | `dwTicker` | INPUT | DWORD | Time measured in 50 ms intervals |
 
-Return type: **DINT** (set in POU properties). Range: overflows after ~24.8 days of ticker value.
+Return type: **DINT** (set in POU properties). Output range: overflows after ~24.8 days of ticker value.
 
 ```iecst
 diCurrentMs := F_TCO_50_TO_MS(TCO_DINT_50);
@@ -149,7 +151,7 @@ Returns the tick count as a `TIME` value in milliseconds: `ticks * 50`.
 |----------|-------|------|-------------|
 | `dwTicker` | INPUT | DWORD | Time measured in 50 ms intervals |
 
-Return type: **TIME** (set in POU properties). Range: overflows after ~24.8 days of ticker value (same limit as `F_TCO_50_TO_MS`).
+Return type: **TIME** (set in POU properties). Output range: overflows after ~24.8 days of ticker value (same limit as `F_TCO_50_TO_MS`).
 
 ```iecst
 tCurrent := F_TCO_50_TO_TIME(TCO_DINT_50);
