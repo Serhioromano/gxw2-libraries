@@ -1,0 +1,31 @@
+EI(TRUE);
+
+Port := MB_PORT_SETTINGS(MB_PARITY_NONE, MB_STOPBIT_1, MB_BPS_9600);
+
+Port := 2#0000_0000_0000_0000_1110_0000_1000_0001;
+OUT_T(TRUE,TC0,10);
+M0 := MB_MASTER_INIT_PORT2(TS0, Port);
+
+IF M8002 OR M1 THEN
+	MB_CHANNELS[0].xEnabled := TRUE;
+	MB_CHANNELS[0].iDev := H1;
+	MB_CHANNELS[0].iNum := 6;
+	MB_CHANNELS[0].iPort := MB_PORT_2;
+	MB_CHANNELS[0].iDDevNum := 100;
+	MB_CHANNELS[0].iReg:= 16384;
+	MB_CHANNELS[0].iWF:= H10;
+	MB_CHANNELS[0].iRF:= H4;
+	MB_CHANNELS[0].iWR:= MB_READ_WRITE;
+	MB_CHANNELS[0].tCycle := 2;
+END_IF;
+	
+MB_SUSPEND_RETRY := 80;
+MB_TIMEOUT_COUNT := 3;
+MB_TIMEOUT_TIME := 20;
+
+lreg1 := reg1;
+lreg2 := reg2;
+lreg3 := reg3;
+lreg4 := reg4;
+
+fbMbProcess(mb_xEnable:=TS0, mb_iBuffer:=0);

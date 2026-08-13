@@ -1,4 +1,8 @@
-# Modbus RTU Driver Library for Coolmay FX3G PLC
+# Modbus RTU Driver V1.6 — Library for Coolmay FX3G PLC
+
+## Abstract
+
+The Modbus RTU Driver enables a Coolmay FX3G PLC to operate as a Modbus RTU master or slave on the two auxiliary RS485 ports (port 2 and port 3). Version V1.6 is a documentation-only release: it documents the `MTB_SLAVE_PORT2` / `MTB_SLAVE_PORT3` port-reconfiguration functions, adds a consolidated global-constants reference, and adds descriptive comments to every variable declaration in the POU CSV files.
 
 ## Terminology
 
@@ -21,6 +25,11 @@ The following libraries must be installed in the project prior to using this dri
 ---
 
 ## Changelog
+
+### V1.6 — 13 August 2026
+
+- **Documented:** `MTB_SLAVE_PORT2` / `MTB_SLAVE_PORT3` port-reconfiguration functions and the global constants (`MB_READ`, `MB_PORT_*`, parity, stop-bit and baud-rate selectors).
+- **Improved:** Added descriptive comments to every variable in the POU CSV files.
 
 ### V1.5 — 9 April 2025
 
@@ -55,6 +64,71 @@ The following libraries must be installed in the project prior to using this dri
 This library enables a Coolmay FX3G PLC to operate as a **Modbus Slave** or a **Modbus Master** (on the secondary and tertiary RS485 ports — ports 2 and 3, respectively) for reading from and writing to Modbus RTU devices. It provides a low-overhead interface for configuring and managing Modbus communication channels.
 
 Coolmay PLC/HMI integrated units are equipped with two RS485 ports: port 2 is exposed on the terminal connector, and port 3 is exposed on the DB9 connector. L02-series PLCs also provide two RS485 ports, both on terminal connectors.
+
+---
+
+## Function Blocks and Functions
+
+| Name | Type | Description |
+|------|------|-------------|
+| `MB_PORT_SETTINGS` | Function | Build the serial-port bit-field (parity, stop bits, baud rate). |
+| `MB_MASTER_INIT_PORT2` | Function | Initialise the Modbus master on port 2. |
+| `MB_MASTER_INIT_PORT3` | Function | Initialise the Modbus master on port 3. |
+| `MB_SLAVE_INIT_PORT2` | Function | Initialise the Modbus slave on port 2. |
+| `MB_SLAVE_INIT_PORT3` | Function | Initialise the Modbus slave on port 3. |
+| `MTB_SLAVE_PORT2` | Function | Reconfigure port 2 for the Mitsubishi protocol. |
+| `MTB_SLAVE_PORT3` | Function | Reconfigure port 3 for the Mitsubishi protocol. |
+| `MB_PROCESS_50` | Function Block | Cycle through channels and issue `ADPRW` read/write requests. |
+
+---
+
+## Global Constants and Variables
+
+### Access Modes
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `MB_READ_WRITE` | `0` | Read and write. |
+| `MB_READ` | `1` | Read only. |
+| `MB_WRITE` | `2` | Write only. |
+
+### Serial Port Settings
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `MB_DL_7` | `0` | 7 data bits. |
+| `MB_DL_8` | `1` | 8 data bits. |
+| `MB_PARITY_NONE` | `0` | No parity. |
+| `MB_PARITY_ODD` | `1` | Odd parity. |
+| `MB_PARITY_EVEN` | `2` | Even parity. |
+| `MB_STOPBIT_1` | `0` | 1 stop bit. |
+| `MB_STOPBIT_2` | `1` | 2 stop bits. |
+| `MB_BPS_600` | `0` | 600 bps. |
+| `MB_BPS_1200` | `1` | 1200 bps. |
+| `MB_BPS_2400` | `2` | 2400 bps. |
+| `MB_BPS_4800` | `3` | 4800 bps. |
+| `MB_BPS_9600` | `4` | 9600 bps. |
+| `MB_BPS_19200` | `5` | 19200 bps. |
+| `MB_BPS_38400` | `6` | 38400 bps. |
+| `MB_BPS_57600` | `7` | 57600 bps. |
+| `MB_BPS_115200` | `8` | 115200 bps. |
+
+### Ports
+
+| Constant | Value | Physical port |
+|----------|-------|---------------|
+| `MB_PORT_2` | `0` | RS485 port 2 — terminal connector (A, B) |
+| `MB_PORT_3` | `1` | RS485 port 3 — DB9 connector (A1, B1) |
+| `MB_PORT_CAN` | `2` | CAN port (H, L) |
+| `MB_PORT_TCP` | `3` | Ethernet TCP port |
+
+### Timeout Tuning
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `MB_TIMEOUT_COUNT` | INT | Consecutive timeouts before a channel is suspended. Default: `2`. |
+| `MB_SUSPEND_RETRY` | INT | Suspended-channel retry interval, in 50 ms units. Default: `80` (4 s). |
+| `MB_TIMEOUT_TIME` | INT | Timeout duration, in 50 ms units. Default: `4` (200 ms). |
 
 ---
 
@@ -117,6 +191,24 @@ These functions initialise the Modbus Master on port 2 (terminal connector) or p
 ```iecst
 PortSettings := MB_PORT_SETTINGS(MB_PARITY_NONE, MB_STOPBIT_1, MB_BPS_9600);
 M0 := MB_MASTER_INIT_PORT2(TRUE, PortSettings);
+```
+
+---
+
+## Port Reconfiguration (Mitsubishi Protocol)
+
+### `MTB_SLAVE_PORT2`, `MTB_SLAVE_PORT3`
+
+These functions reconfigure port 2 or port 3 to the Mitsubishi proprietary protocol (not Modbus RTU), set the station address to `1`, and set the serial format to 38400 baud, 7 data bits, even parity, 1 stop bit. They are used to switch a port back from Modbus RTU to the Mitsubishi protocol.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `xInit` | INPUT | `Bit` | Reconfiguration command. The port is reconfigured on every rising edge. |
+
+#### Example
+
+```iecst
+M0 := MTB_SLAVE_PORT2(TRUE);
 ```
 
 ---

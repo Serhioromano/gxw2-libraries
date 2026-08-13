@@ -1,0 +1,11 @@
+IF MEP(xInit) THEN
+	temp:= DSETB(PortSettings, 13);
+	temp:= DSETB(temp, 14);
+	temp:= DSETB(temp, 15);
+	DMOV(TRUE, temp, D8120);
+	D8121 := iAddress; (* Address station *)
+	M8196 := TRUE; (* Modbus protocol *)
+	M8125 := TRUE; (* Modbus protocol *)
+	D8397 := 0; (* Use PORT2 for ADPRW *)
+END_IF;
+MB_SLAVE_INIT_PORT2 := TRUE;
