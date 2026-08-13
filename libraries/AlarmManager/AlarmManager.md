@@ -1,8 +1,8 @@
-# AlarmManager V207 — Library for Coolmay FX3G PLC
+# AlarmManager V208 — Library for Coolmay FX3G PLC
 
 ## Abstract
 
-This version of the Alarm Manager library introduces a user-defined storage model. Alarm and event storage is no longer reserved by the library: the application declares the storage arrays in the project's global label list and sizes them to its actual requirements. The array capacities are compile-time constants with the `c_` prefix — `c_AM_ALARMS_NUM` and `c_AM_EVENTS_NUM`. Memory consumption is therefore proportional to the number of alarms and events actually used, instead of a fixed 128-element reservation. The library retains the array-based storage scheme introduced in V204, which enables a configurable delay parameter for every alarm event, specified in increments of 50 ms. In V207 the `F_AM_ISON` helper function was removed; the state of a single alarm is now read directly from the global array as `AM_ALARMS[iNum].Alarm`, which is possible in programs and function blocks (the function form was only needed because IEC functions cannot access global variables).
+This version of the Alarm Manager library introduces a user-defined storage model. Alarm and event storage is no longer reserved by the library: the application declares the storage arrays in the project's global label list and sizes them to its actual requirements. The array capacities are compile-time constants with the `c_` prefix — `c_AM_ALARMS_NUM` and `c_AM_EVENTS_NUM`. Memory consumption is therefore proportional to the number of alarms and events actually used, instead of a fixed 128-element reservation. The library retains the array-based storage scheme introduced in V204, which enables a configurable delay parameter for every alarm event, specified in increments of 50 ms. In V207 the `F_AM_ISON` helper function was removed; the state of a single alarm is now read directly from the global array as `AM_ALARMS[iNum].Alarm`, which is possible in programs and function blocks (the function form was only needed because IEC functions cannot access global variables). In V208 the packing function blocks (`FB_AM_PACK_ALARMS`, `FB_AM_PACK_EVENTS`) no longer require the array length to be a multiple of 16: they stop reading as soon as all alarms or events have been packed, so the last register may be partially filled (unused bits remain `0`) and array access always stays within the declared bounds.
 
 ---
 
@@ -380,7 +380,7 @@ fbAMPack(DNUM := 3280, PD := c_AM_PACK_D);
 
 All alarm states are written starting from `D3280`. The number of devices consumed equals `c_AM_ALARMS_NUM / 16 + 1`: one 16-bit device for up to 16 alarms, two devices for up to 32, and so forth.
 
-> **Note:** The pack function block reads alarm states in blocks of 16. To stay within the declared array, the array length (`c_AM_ALARMS_NUM + 1`) must be a multiple of 16 — i.e. `c_AM_ALARMS_NUM` must be one of `15, 31, 47, 63, 79, 95, 111, 127`. This matches the fixed 128-element arrays of earlier versions when packing is required.
+> **Note:** The pack function block reads alarm states in blocks of 16 and stops automatically once all `c_AM_ALARMS_NUM + 1` alarms have been packed. If the array length is not a multiple of 16, the unused bits of the last register remain `0`; the number of registers written is always `c_AM_ALARMS_NUM / 16 + 1`, and array access never exceeds the declared bounds.
 
 To access individual alarm states from an HMI or external device:
 - `D3280.0` corresponds to alarm ID `0`
@@ -556,7 +556,7 @@ fbAMPackE(DNUM := 3304, PD := c_AM_PACK_D);
 
 All event states are written starting from `D3304`. The number of devices consumed equals `c_AM_EVENTS_NUM / 16 + 1`: one device for up to 16 events, two devices for up to 32, and so on.
 
-> **Note:** The same multiple-of-16 constraint as for `FB_AM_PACK_ALARMS` applies: the event array length (`c_AM_EVENTS_NUM + 1`) must be a multiple of 16 when packing is used.
+> **Note:** As with `FB_AM_PACK_ALARMS`, packing stops automatically once all `c_AM_EVENTS_NUM + 1` events have been packed. If the event array length is not a multiple of 16, the unused bits of the last register remain `0`, and array access never exceeds the declared bounds.
 
 To access event states from an HMI, read `D3304` through `D3312`. Each register stores the states of 16 events in a bit-packed format:
 
@@ -572,4 +572,4 @@ To access event states from an HMI, read `D3304` through `D3312`. Each register 
 
 ## Test Program
 
-The library ships a compile-and-run smoke test, `PRG_AM_TEST`, that registers three alarms and exercises every alarm function block (initialisation, registration, querying, reset, buzzer, and packing). The test declares its storage in the global label list `GVL_AM_TEST.csv` exactly as described in Prerequisites, with `c_AM_ALARMS_NUM = 15` (16 alarm slots — the minimum multiple of 16 required for safe packing). All test labels are auto-assigned by the compiler (no explicit device bindings); force the condition inputs (`xCondAlarm0..2`, `xReset`) and watch the result labels in the GX Works 2 device monitor. The test is maintained in `POU/PRG_AM_TEST.st` / `.csv` and `POU/GVL_AM_TEST.csv`.
+The library ships a compile-and-run smoke test, `PRG_AM_TEST`, that registers three alarms and exercises every alarm function block (initialisation, registration, querying, reset, buzzer, and packing). The test declares its storage in the global label list `GVL_AM_TEST.csv` exactly as described in Prerequisites, with `c_AM_ALARMS_NUM = 15` (16 alarm slots, which pack into a single register). All test labels are auto-assigned by the compiler (no explicit device bindings); force the condition inputs (`xCondAlarm0..2`, `xReset`) and watch the result labels in the GX Works 2 device monitor. The test is maintained in `POU/PRG_AM_TEST.st` / `.csv` and `POU/GVL_AM_TEST.csv`.

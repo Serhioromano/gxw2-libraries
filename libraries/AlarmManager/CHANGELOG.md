@@ -1,5 +1,10 @@
 # Changelog
 
+## V208 — 2026-08-13
+
+- **Code:** `FB_AM_PACK_ALARMS.st` and `FB_AM_PACK_EVENTS.st` now guard the inner packing loop. Before reading `AM_ALARMS[iTCounter]` / `AM_EVENTS[iTCounter]` the code checks `iTCounter` against `c_AM_ALARMS_NUM` / `c_AM_EVENTS_NUM` and exits the loop as soon as all alarms/events have been packed (remaining bits of the last register stay `0`). This removes the previous requirement that the array length be a multiple of 16 and guarantees array access never exceeds the declared upper bound, so packing is safe for any user-declared array length.
+- **Documentation:** Updated the `FB_AM_PACK_ALARMS` / `FB_AM_PACK_EVENTS` sections of `AlarmManager.md` (removed the multiple-of-16 constraint notes), the test-program note, and `README.md`.
+
 ## V207 — 2026-08-13
 
 - **Removed:** The `F_AM_ISON` function (files `F_AM_ISON.st` / `.csv` deleted). The state of a single alarm is now read directly from the global array: `AM_ALARMS[iNum].Alarm`.

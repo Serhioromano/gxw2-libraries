@@ -53,7 +53,7 @@ The application must declare the storage in its project's global label list, siz
 | `AM_ALARMS` | `VAR_GLOBAL` | `ARRAY [0..c_AM_ALARMS_NUM] OF AM_ALARM` |
 | `AM_EVENTS` | `VAR_GLOBAL` | `ARRAY [0..c_AM_EVENTS_NUM] OF AM_EVENT` |
 
-The scan loops use `c_AM_ALARMS_NUM` / `c_AM_EVENTS_NUM` as the upper bound. `FB_AM_PACK_ALARMS` / `FB_AM_PACK_EVENTS` require an array length that is a multiple of 16 (upper bound 15, 31, 47, … 127).
+The scan loops use `c_AM_ALARMS_NUM` / `c_AM_EVENTS_NUM` as the upper bound. `FB_AM_PACK_ALARMS` / `FB_AM_PACK_EVENTS` pack the alarm/event bits into 16-bit registers and stop automatically as soon as all slots have been packed; any array length is supported (the last register may be partially filled, remaining bits stay `0`).
 
 ## Test Program (PRG_AM_TEST)
 

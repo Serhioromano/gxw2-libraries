@@ -5,6 +5,9 @@ FOR iCount := 0 TO iRegisters DO
 	Z5 := DNUM + iCount;
 	wTemp := 0;
 	FOR iCount2 := 0 TO 15 DO
+		IF iTCounter > c_AM_EVENTS_NUM THEN
+			EXIT; (* all events already packed; leave remaining bits zero *)
+		END_IF;
 		wTemp := SRB(wTemp, iCount2, AM_EVENTS[iTCounter].Event);
 		INC(TRUE, iTCounter);
 	END_FOR;
