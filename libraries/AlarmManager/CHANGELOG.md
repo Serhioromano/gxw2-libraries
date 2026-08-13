@@ -1,5 +1,12 @@
 # Changelog
 
+## V209 — 2026-08-13
+
+- **Feature:** `FB_AM_PACK_ALARMS` and `FB_AM_PACK_EVENTS` can now pack directly into `M` bit devices. New global constant `c_AM_PACK_M` (value `2`) in `GVL_AM.csv`; passing `PD := c_AM_PACK_M` writes each alarm/event state to its own `M` bit (`M(DNUM + n)` for ID `n`) instead of `D`/`R` registers. The `D`/`R` write branch was changed from `ELSE` to `ELSIF` so an unrecognised `PD` value writes nothing.
+- **Code:** In `PD := c_AM_PACK_M` mode the pack blocks write each bit directly to its `M` device in a single `WHILE` loop; they no longer assemble the packed word (`wTemp` / `SRB`) and no longer update the debug array `arTW` — those remain in `D`/`R` mode only, where `arTW` still holds the packed register words for monitoring.
+- **CSV:** Added `c_AM_PACK_M` to `GVL_AM.csv`; updated the `PD` comments in `FB_AM_PACK_ALARMS.csv` and `FB_AM_PACK_EVENTS.csv`.
+- **Documentation:** Updated `AlarmManager.md` (pack sections, HMI compatibility note, abstract) and `README.md`.
+
 ## V208 — 2026-08-13
 
 - **Code:** `FB_AM_PACK_ALARMS.st` and `FB_AM_PACK_EVENTS.st` now guard the inner packing loop. Before reading `AM_ALARMS[iTCounter]` / `AM_EVENTS[iTCounter]` the code checks `iTCounter` against `c_AM_ALARMS_NUM` / `c_AM_EVENTS_NUM` and exits the loop as soon as all alarms/events have been packed (remaining bits of the last register stay `0`). This removes the previous requirement that the array length be a multiple of 16 and guarantees array access never exceeds the declared upper bound, so packing is safe for any user-declared array length.

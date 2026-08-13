@@ -1,8 +1,8 @@
-# AlarmManager V208 — Library for Coolmay FX3G PLC
+# AlarmManager V209 — Library for Coolmay FX3G PLC
 
 ## Abstract
 
-This version of the Alarm Manager library introduces a user-defined storage model. Alarm and event storage is no longer reserved by the library: the application declares the storage arrays in the project's global label list and sizes them to its actual requirements. The array capacities are compile-time constants with the `c_` prefix — `c_AM_ALARMS_NUM` and `c_AM_EVENTS_NUM`. Memory consumption is therefore proportional to the number of alarms and events actually used, instead of a fixed 128-element reservation. The library retains the array-based storage scheme introduced in V204, which enables a configurable delay parameter for every alarm event, specified in increments of 50 ms. In V207 the `F_AM_ISON` helper function was removed; the state of a single alarm is now read directly from the global array as `AM_ALARMS[iNum].Alarm`, which is possible in programs and function blocks (the function form was only needed because IEC functions cannot access global variables). In V208 the packing function blocks (`FB_AM_PACK_ALARMS`, `FB_AM_PACK_EVENTS`) no longer require the array length to be a multiple of 16: they stop reading as soon as all alarms or events have been packed, so the last register may be partially filled (unused bits remain `0`) and array access always stays within the declared bounds.
+This version of the Alarm Manager library introduces a user-defined storage model. Alarm and event storage is no longer reserved by the library: the application declares the storage arrays in the project's global label list and sizes them to its actual requirements. The array capacities are compile-time constants with the `c_` prefix — `c_AM_ALARMS_NUM` and `c_AM_EVENTS_NUM`. Memory consumption is therefore proportional to the number of alarms and events actually used, instead of a fixed 128-element reservation. The library retains the array-based storage scheme introduced in V204, which enables a configurable delay parameter for every alarm event, specified in increments of 50 ms. In V207 the `F_AM_ISON` helper function was removed; the state of a single alarm is now read directly from the global array as `AM_ALARMS[iNum].Alarm`, which is possible in programs and function blocks (the function form was only needed because IEC functions cannot access global variables). In V208 the packing function blocks (`FB_AM_PACK_ALARMS`, `FB_AM_PACK_EVENTS`) no longer require the array length to be a multiple of 16: they stop reading as soon as all alarms or events have been packed, so the last register may be partially filled (unused bits remain `0`) and array access always stays within the declared bounds. In V209 the packing function blocks can write directly to `M` bit devices (`PD := c_AM_PACK_M`): each alarm or event state is written to its own `M` bit, which is the native format for HMI panels that read alarms exclusively from the `M` area and removes the need for a separate `BMOV` transfer step.
 
 ---
 
@@ -69,8 +69,8 @@ The library supports a maximum of **128 alarms** (the fixed array bounds of the 
 | `FB_AM_BUZZER` | Function Block | Test for alarms that trigger the buzzer |
 | `FB_AM_EV` | Function Block | Create an event |
 | `FB_AM_EVENT_RESET` | Function Block | Reset all latched events |
-| `FB_AM_PACK_ALARMS` | Function Block | Pack alarm states bitwise into a device register |
-| `FB_AM_PACK_EVENTS` | Function Block | Pack event states bitwise into a device register |
+| `FB_AM_PACK_ALARMS` | Function Block | Pack alarm states bitwise into `D`/`R` registers or `M` devices |
+| `FB_AM_PACK_EVENTS` | Function Block | Pack event states bitwise into `D`/`R` registers or `M` devices |
 | `F_AM_DELAY_OUT` | Function | Delay output using TimeControl |
 | `F_AM_MOVE_TO_M` | Function | BMOV wrapper for HMI bit-register transfer |
 
@@ -360,7 +360,7 @@ Packs the state of every alarm, bit by bit, into a contiguous block of device re
 | Variable | Scope | Type | Description |
 | -------- | ----- | ---- | ----------- |
 | `DNUM` | INPUT | INT | Starting device number for the packed data. |
-| `PD` | INPUT | INT | Target device area: `c_AM_PACK_D` for `D` registers, `c_AM_PACK_R` for `R` registers. |
+| `PD` | INPUT | INT | Target device area: `c_AM_PACK_D` for `D` registers, `c_AM_PACK_R` for `R` registers, `c_AM_PACK_M` for `M` devices (one bit per alarm). |
 
 #### Example
 
@@ -380,6 +380,12 @@ fbAMPack(DNUM := 3280, PD := c_AM_PACK_D);
 
 All alarm states are written starting from `D3280`. The number of devices consumed equals `c_AM_ALARMS_NUM / 16 + 1`: one 16-bit device for up to 16 alarms, two devices for up to 32, and so forth.
 
+With `PD := c_AM_PACK_M` the alarm states are written to the `M` area instead: alarm ID `n` is written to `M(DNUM + n)` (`M3000` for alarm `0`, `M3001` for alarm `1`, … when `DNUM := 3000`). This is the native format for HMI panels that read alarms from the `M` area and requires no `BMOV` transfer:
+
+```iecst
+fbAMPack(DNUM := 3000, PD := c_AM_PACK_M);
+```
+
 > **Note:** The pack function block reads alarm states in blocks of 16 and stops automatically once all `c_AM_ALARMS_NUM + 1` alarms have been packed. If the array length is not a multiple of 16, the unused bits of the last register remain `0`; the number of registers written is always `c_AM_ALARMS_NUM / 16 + 1`, and array access never exceeds the declared bounds.
 
 To access individual alarm states from an HMI or external device:
@@ -395,7 +401,7 @@ To access individual alarm states from an HMI or external device:
 
 #### HMI Compatibility Note
 
-Certain HMI models (e.g., the OP320A/S series) support alarm reads exclusively from `M` (bit) registers, not from `D` (word) registers. In such cases the `BMOV` instruction must be used to transfer the packed data:
+Certain HMI models (e.g., the OP320A/S series) support alarm reads exclusively from `M` (bit) registers, not from `D` (word) registers. The pack block can write directly to the `M` area with `PD := c_AM_PACK_M` (see above), so no separate transfer step is required. For applications that still pack to `D` registers, the `BMOV` instruction can transfer the packed data:
 
 ```iecst
 BMOV(TRUE, D3280, 1, K4M3000);
@@ -536,7 +542,7 @@ Packs the state of every event, bit by bit, into a contiguous block of device re
 | Variable | Scope | Type | Description |
 | -------- | ----- | ---- | ----------- |
 | `DNUM` | INPUT | INT | Starting device number for the packed data. |
-| `PD` | INPUT | INT | Target device area: `c_AM_PACK_D` for `D` registers, `c_AM_PACK_R` for `R` registers. |
+| `PD` | INPUT | INT | Target device area: `c_AM_PACK_D` for `D` registers, `c_AM_PACK_R` for `R` registers, `c_AM_PACK_M` for `M` devices (one bit per event). |
 
 #### Example
 
@@ -555,6 +561,8 @@ fbAMPackE(DNUM := 3304, PD := c_AM_PACK_D);
 ```
 
 All event states are written starting from `D3304`. The number of devices consumed equals `c_AM_EVENTS_NUM / 16 + 1`: one device for up to 16 events, two devices for up to 32, and so on.
+
+With `PD := c_AM_PACK_M` the event states are written to the `M` area instead: event ID `n` is written to `M(DNUM + n)`.
 
 > **Note:** As with `FB_AM_PACK_ALARMS`, packing stops automatically once all `c_AM_EVENTS_NUM + 1` events have been packed. If the event array length is not a multiple of 16, the unused bits of the last register remain `0`, and array access never exceeds the declared bounds.
 

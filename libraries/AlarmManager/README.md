@@ -41,6 +41,7 @@ The library GVL declares constants only. Alarm/event storage is **not** part of 
 | `c_AM_INFO` (const 1) | Severity constant for Info/Message-level alarms |
 | `c_AM_PACK_D` (const 0) | Pack target: D registers |
 | `c_AM_PACK_R` (const 1) | Pack target: R registers |
+| `c_AM_PACK_M` (const 2) | Pack target: M devices (one bit per alarm/event) |
 
 ## User Requirements (declared by the application)
 
@@ -53,7 +54,7 @@ The application must declare the storage in its project's global label list, siz
 | `AM_ALARMS` | `VAR_GLOBAL` | `ARRAY [0..c_AM_ALARMS_NUM] OF AM_ALARM` |
 | `AM_EVENTS` | `VAR_GLOBAL` | `ARRAY [0..c_AM_EVENTS_NUM] OF AM_EVENT` |
 
-The scan loops use `c_AM_ALARMS_NUM` / `c_AM_EVENTS_NUM` as the upper bound. `FB_AM_PACK_ALARMS` / `FB_AM_PACK_EVENTS` pack the alarm/event bits into 16-bit registers and stop automatically as soon as all slots have been packed; any array length is supported (the last register may be partially filled, remaining bits stay `0`).
+The scan loops use `c_AM_ALARMS_NUM` / `c_AM_EVENTS_NUM` as the upper bound. `FB_AM_PACK_ALARMS` / `FB_AM_PACK_EVENTS` pack the alarm/event bits into 16-bit registers and stop automatically as soon as all slots have been packed; any array length is supported (the last register may be partially filled, remaining bits stay `0`). With `PD := c_AM_PACK_M` each alarm/event bit is written to its own `M` device (`M(DNUM + n)` for ID `n`) instead of `D`/`R` registers.
 
 ## Test Program (PRG_AM_TEST)
 
