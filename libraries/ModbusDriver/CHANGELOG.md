@@ -1,5 +1,13 @@
 # Changelog
 
+## V7 — 2026-08-13
+
+- **Storage model:** Channel storage is no longer reserved by the library. Removed `MB_CHANNELS` from `GVL_MB.csv`. The application must now declare the `MB_CHANNELS` array and the compile-time capacity constant `c_MB_CHANNELS_NUM` (upper bound, last valid index) in its project's global label list, sized to its requirements — the library references them directly.
+- **Code:** `MB_PROCESS_50.st` now cycles through `c_MB_CHANNELS_NUM` instead of a hardcoded `29`: the two initialisation `FOR iIndex := 0 TO 29 DO` loops and the next-channel wrap `IF (iCount = 29) THEN` now use `c_MB_CHANNELS_NUM`. Added a header comment explaining the user-declared dependency.
+- **CSV:** Updated the `iCount` comment in `MB_PROCESS_50.csv` to reference `c_MB_CHANNELS_NUM`.
+- **Test program:** Added `GVL_MB_TEST.csv` declaring `c_MB_CHANNELS_NUM := 2` and `MB_CHANNELS : ARRAY [0..2] OF MB_REG_50` for `PRG_MB_TEST`.
+- **Documentation:** Updated `Modbus.md` (prerequisites, architectural description, `MB_PROCESS_50` section, complete example) and `README.md` (user requirements).
+
 ## V6 — 2026-08-13
 
 - **Comments:** Added descriptive English comments to every variable in all POU CSV files (`GVL_MB.csv`, `MB_MASTER_INIT_PORT2.csv`, `MB_MASTER_INIT_PORT3.csv`, `MB_PORT_SETTINGS.csv`, `MB_PROCESS_50.csv`, `MB_SLAVE_INIT_PORT2.csv`, `MB_SLAVE_INIT_PORT3.csv`, `MTB_SLAVE_PORT2.csv`, `MTB_SLAVE_PORT3.csv`, `PRG_MB_TEST.csv`, `ST_MB_REG_50.csv`). Corrected typos in existing comments (`Whatchgog`, `incriments`, `suspention`, `adderss`, `addesss`, `memmory`, `rised ende`). No variable names, types, or logic changed.

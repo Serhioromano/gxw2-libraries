@@ -1,3 +1,8 @@
+(*
+  MB_PROCESS_50 - Modbus channel scheduler (50 ms cycle).
+  MB_CHANNELS and c_MB_CHANNELS_NUM are declared by the application
+  in its global label list; the library references them directly.
+*)
 (* If we disable block, go to to step 0 *)
 MOVP(NOT mb_xEnable, 0, imbStep);
 MOVP(mb_xEnable, 0, imbStep);
@@ -8,7 +13,7 @@ MOV(MB_SUSPEND_RETRY = 0, 80, MB_SUSPEND_RETRY);
 MOV(MB_TIMEOUT_TIME = 0, 4, MB_TIMEOUT_TIME);
 
 IF MEP(mb_xEnable) THEN
-	FOR iIndex := 0 TO 29 DO
+	FOR iIndex := 0 TO c_MB_CHANNELS_NUM DO
 			IF MB_CHANNELS[iIndex].iNum > 0 THEN
 				MB_CHANNELS[iIndex].iTimeOut := 0;
 				MB_CHANNELS[iIndex].tStart := 0;
@@ -31,7 +36,7 @@ CASE imbStep OF
 		MOV(fbTON1.Q AND MB_CHANNELS[0].iDDevNum > 0, 1, imbStep);
 
 	1:	(* Set defaults *)
-		FOR iIndex := 0 TO 29 DO
+		FOR iIndex := 0 TO c_MB_CHANNELS_NUM DO
 			IF MB_CHANNELS[iIndex].iNum > 0 THEN
 				MB_CHANNELS[iIndex].tStart := TCO_DINT_50;
 				MOV(MB_CHANNELS[iIndex].iRF = 0, H3, MB_CHANNELS[iIndex].iRF);
@@ -318,7 +323,7 @@ END_CASE;
 (* If switch to next channel mpve index *)
 IF xNextChannel THEN
 	xNextChannel := FALSE;
-	IF (iCount = 29) THEN
+	IF (iCount = c_MB_CHANNELS_NUM) THEN
 		iCount := 0;
 	ELSE
 		IF MB_CHANNELS[iCount + 1].iNum > 0 THEN

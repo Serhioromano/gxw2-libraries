@@ -1,8 +1,8 @@
-# Modbus RTU Driver V1.6 — Library for Coolmay FX3G PLC
+# Modbus RTU Driver V7 — Library for Coolmay FX3G PLC
 
 ## Abstract
 
-The Modbus RTU Driver enables a Coolmay FX3G PLC to operate as a Modbus RTU master or slave on the two auxiliary RS485 ports (port 2 and port 3). Version V6 is a documentation-only release: it documents the `MTB_SLAVE_PORT2` / `MTB_SLAVE_PORT3` port-reconfiguration functions, adds a consolidated global-constants reference, and adds descriptive comments to every variable declaration in the POU CSV files.
+The Modbus RTU Driver enables a Coolmay FX3G PLC to operate as a Modbus RTU master or slave on the two auxiliary RS485 ports (port 2 and port 3). Version V7 changes the channel-storage model: the `MB_CHANNELS` array and the `c_MB_CHANNELS_NUM` capacity constant are no longer declared by the library. The application declares them in its own global label list, sized to the number of channels it actually uses, and `MB_PROCESS_50` cycles through that array.
 
 ## Terminology
 
@@ -22,11 +22,18 @@ The following libraries must be installed in the project prior to using this dri
 > - The TimeControl V2 library must be installed and the `TCO_TICKER_50` ticker must be configured. This ticker advances at **50 ms** intervals and is required by the `MB_PROCESS_50` function block.
 > - This library is compatible with **GX Works 2 v1.91** and later. Updates are available from the `coolmay/soft` directory.
 
+The application must declare the Modbus channel storage in its project's global label list before using `MB_PROCESS_50`:
+
+- `c_MB_CHANNELS_NUM` — `VAR_GLOBAL_CONSTANT` (`INT`), the upper bound (last valid index) of the channel array.
+- `MB_CHANNELS` — `VAR_GLOBAL` (`ARRAY [0..c_MB_CHANNELS_NUM] OF MB_REG_50`), the channel array itself.
+
 ---
 
 ## Architectural Description
 
 This library enables a Coolmay FX3G PLC to operate as a **Modbus Slave** or a **Modbus Master** (on the secondary and tertiary RS485 ports — ports 2 and 3, respectively) for reading from and writing to Modbus RTU devices. It provides a low-overhead interface for configuring and managing Modbus communication channels.
+
+The Modbus channels are described in a user-declared global array `MB_CHANNELS` of type `MB_REG_50`. The library does not fix the channel count: the application declares the array and the `c_MB_CHANNELS_NUM` upper bound in its global label list, and `MB_PROCESS_50` cycles through exactly that many channels. This keeps the automatically-assigned device usage proportional to the number of channels actually configured.
 
 Coolmay PLC/HMI integrated units are equipped with two RS485 ports: port 2 is exposed on the terminal connector, and port 3 is exposed on the DB9 connector. L02-series PLCs also provide two RS485 ports, both on terminal connectors.
 
@@ -192,7 +199,7 @@ This function block orchestrates all read and write operations across the config
 
 #### The `MB_REG_50` Structure
 
-A global array `MB_CHANNELS` of 30 elements of type `MB_REG_50` is declared internally by the library. No user declaration is required. This array defines the set of channels to be processed. Each channel may read or write up to 125 registers. The array must be configured once, typically on PLC startup under the `M8002` initialisation pulse flag.
+The application declares a global array `MB_CHANNELS` of type `MB_REG_50`, together with a global constant `c_MB_CHANNELS_NUM` that holds the array's upper bound (last valid index). The library references both labels directly — it does not declare them. `MB_PROCESS_50` cycles through channels `0` to `c_MB_CHANNELS_NUM`, so the number of channels is fully under application control (e.g. `c_MB_CHANNELS_NUM := 2` for 3 channels, `:= 29` for 30 channels). Each channel may read or write up to 125 registers. The array must be configured once, typically on PLC startup under the `M8002` initialisation pulse flag.
 
 The following table lists the fields of the `MB_REG_50` structure:
 
@@ -292,6 +299,13 @@ The same principle applies to coil channels: use `H5` (Write Single Coil), even 
 ---
 
 #### Complete Example
+
+Before configuring channels, declare the storage in the project's global label list. The following declares three channels (indices `0`–`2`):
+
+| Label | Class | Type / Value |
+|-------|-------|--------------|
+| `c_MB_CHANNELS_NUM` | `VAR_GLOBAL_CONSTANT` | `INT` = `2` |
+| `MB_CHANNELS` | `VAR_GLOBAL` | `ARRAY [0..2] OF MB_REG_50` |
 
 ```iecst
 IF M8002 THEN

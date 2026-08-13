@@ -55,7 +55,6 @@ Sections are separated by a horizontal rule: `---`
 
 A single paragraph (or two) describing:
 - What the library does.
-- The current version's key change(s) compared to the previous version.
 - Any trade-offs the user should know about (e.g. memory vs. features).
 
 Write in formal, precise prose. No marketing language.

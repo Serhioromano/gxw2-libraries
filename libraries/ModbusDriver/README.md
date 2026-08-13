@@ -2,13 +2,14 @@
 
 ## Overview
 
-ModbusDriver is a Structured Text library for Mitsubishi FX series PLCs (GX Works 2) that implements Modbus RTU master and slave communication on the two auxiliary RS485 ports (port 2 and port 3). It provides port-initialisation functions, a bit-field builder for the serial-port configuration registers, and a channel-processing function block that cycles through a configurable array of Modbus channels and issues `ADPRW` requests.
+ModbusDriver is a Structured Text library for Mitsubishi FX series PLCs (GX Works 2) that implements Modbus RTU master and slave communication on the two auxiliary RS485 ports (port 2 and port 3). It provides port-initialisation functions, a bit-field builder for the serial-port configuration registers, and a channel-processing function block that cycles through a configurable array of Modbus channels and issues `ADPRW` requests. The channel array and its size are **not** part of the library — the application declares them in its own global label list (see User Requirements below).
 
 ## File Structure
 
 ```
 POU/
-├── GVL_MB.csv                     — Global constants (access modes, parity, stop bits, baud rates, ports) and the MB_CHANNELS array
+├── GVL_MB.csv                     — Global constants (access modes, parity, stop bits, baud rates, ports) and timeout globals
+├── GVL_MB_TEST.csv                — Test-project globals: user-declared channel storage (MB_CHANNELS + c_MB_CHANNELS_NUM)
 ├── ST_MB_REG_50.csv               — MB_REG_50 struct definition (per-channel configuration)
 ├── MB_PORT_SETTINGS.st / .csv     — Function: build the D8120/D8400 port bit-field from parity/stop/baud inputs
 ├── MB_MASTER_INIT_PORT2.st / .csv — Function: initialise Modbus master on port 2
@@ -17,7 +18,7 @@ POU/
 ├── MB_SLAVE_INIT_PORT3.st / .csv  — Function: initialise Modbus slave on port 3
 ├── MTB_SLAVE_PORT2.st / .csv      — Function: switch port 2 back to Mitsubishi protocol (38400/7/E/1)
 ├── MTB_SLAVE_PORT3.st / .csv      — Function: switch port 3 back to Mitsubishi protocol (38400/7/E/1)
-├── MB_PROCESS_50.st / .csv        — Function Block: cycle through MB_CHANNELS and issue ADPRW read/write requests
+├── MB_PROCESS_50.st / .csv        — Function Block: cycle through the application-declared MB_CHANNELS and issue ADPRW read/write requests
 └── PRG_MB_TEST.st / .csv          — Test/example program exercising the driver
 ```
 
@@ -64,7 +65,17 @@ POU/
 | `MB_TIMEOUT_COUNT` | INT | Consecutive timeouts before a channel is suspended |
 | `MB_SUSPEND_RETRY` | INT | Suspended-channel retry interval (50 ms units) |
 | `MB_TIMEOUT_TIME` | INT | Timeout duration (50 ms units) |
-| `MB_CHANNELS` | `ARRAY [0..29] OF MB_REG_50` | Channel configuration array — 30 channels |
+
+## User Requirements (declared by the application)
+
+The application must declare the channel storage in its own global label list, sized to its needs. The library code references these labels directly; without them the project does not compile.
+
+| Label | Class | Type |
+|---|---|---|
+| `c_MB_CHANNELS_NUM` | `VAR_GLOBAL_CONSTANT` | INT — upper bound (last index) of `MB_CHANNELS` |
+| `MB_CHANNELS` | `VAR_GLOBAL` | `ARRAY [0..c_MB_CHANNELS_NUM] OF MB_REG_50` |
+
+`c_MB_CHANNELS_NUM` is the **last valid index**, so the array holds `c_MB_CHANNELS_NUM + 1` channels. For 30 channels set `c_MB_CHANNELS_NUM := 29`. Keep the literal array bound in sync with `c_MB_CHANNELS_NUM`.
 
 ## Conventions & Gotchas
 
@@ -73,10 +84,10 @@ POU/
 - Requires the **TimeControl** library: `MB_PROCESS_50` uses `TCO_DINT_50` and `TCO_50_DIFF` for 50 ms scheduling. `TCO_TICKER_50` must run in an interrupt task.
 - `MB_PROCESS_50` must be called every scan (or at least faster than the shortest `tCycle`). A startup `fbTON1` delay of 3 s gates the first request.
 - Channel storage: each channel reserves **2 × `iNum`** devices in the `D` (register) or `M` (coil) area — half for values, half for change tracking. Allocate `iDDevNum` so consecutive channels do not overlap (see `Modbus.md`).
-- `MB_CHANNELS` is declared globally by the library; configure it once at startup (typically under `M8002`).
+- `MB_CHANNELS` and `c_MB_CHANNELS_NUM` are user requirements — declared by the application, not the library. Configure the channel fields once at startup (typically under `M8002`).
 - The initialisation functions write Coolmay/Mitsubishi special registers directly (`D8120`, `D8400`, `D8126`, `D8397`, `M8125`, `M8192`, `M8196`, …). These are port-configuration registers — do not rename or re-map them.
 - CSV files are UTF-16LE + BOM, tab-separated, every cell quoted, LF line endings; `.st` files use CRLF.
 
 ## Test Program (PRG_MB_TEST)
 
-`PRG_MB_TEST` is a compile-and-run example: it enables interrupts, builds a port bit-field via `MB_PORT_SETTINGS`, initialises the master on port 2 under the `M8002`/`M1` pulse, configures channel 0 (read/write of 6 holding registers from device 1), sets the timeout globals, and calls `fbMbProcess` every scan. It also copies four test registers (`reg1`–`reg4`) into local labels for monitoring.
+`PRG_MB_TEST` is a compile-and-run example: it enables interrupts, builds a port bit-field via `MB_PORT_SETTINGS`, initialises the master on port 2 under the `M8002`/`M1` pulse, configures channel 0 (read/write of 6 holding registers from device 1), sets the timeout globals, and calls `fbMbProcess` every scan. The channel storage (`MB_CHANNELS`, `c_MB_CHANNELS_NUM`) is declared in `GVL_MB_TEST.csv` (3 channels). It also copies four test registers (`reg1`–`reg4`) into local labels for monitoring.
