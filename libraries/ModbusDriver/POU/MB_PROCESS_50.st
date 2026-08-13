@@ -2,7 +2,7 @@
   MB_PROCESS_50 - Modbus channel scheduler (50 ms cycle).
   MB_CHANNELS and c_MB_CHANNELS_NUM are declared by the application
   in its global label list; the library references them directly.
-*)
+ *)
 (* If we disable block, go to to step 0 *)
 MOVP(NOT mb_xEnable, 0, imbStep);
 MOVP(mb_xEnable, 0, imbStep);
@@ -32,7 +32,7 @@ INC(mb_Timeout > 0, MB_CHANNELS[iCount].iTimeOut);
 IF imbStep = 20 THEN fbTON2(IN := FALSE); END_IF;
 
 CASE imbStep OF
-	0:  (* BOOT DELAY ON START *)
+	0: (* BOOT DELAY ON START *)
 		MOV(fbTON1.Q AND MB_CHANNELS[0].iDDevNum > 0, 1, imbStep);
 
 	1:	(* Set defaults *)
@@ -46,7 +46,7 @@ CASE imbStep OF
 					MB_CHANNELS[iIndex].iWF = H6 OR MB_CHANNELS[iIndex].iWF = H10
 					OR MB_CHANNELS[iIndex].iRF = H3 OR MB_CHANNELS[iIndex].iRF = H4
 				);
-				
+
 				(* Reset devices to 0 *)
 				Z3 := MB_CHANNELS[iIndex].iDDevNum;
 				FOR iCount := 0 TO (MB_CHANNELS[iIndex ].iNum - 1) DO
@@ -57,7 +57,7 @@ CASE imbStep OF
 				END_FOR;
 			END_IF;
 		END_FOR;
-		lastIndex := -1;
+		lastIndex := - 1;
 		iCount := 0;
 		xAlloWrite := FALSE;
 		imbStep := 20;
@@ -104,7 +104,7 @@ CASE imbStep OF
 				END_IF;
 
 				setReg := MB_CHANNELS[iCount].iReg;
-				setZ   := MB_CHANNELS[iCount].iDDevNum;
+				setZ := MB_CHANNELS[iCount].iDDevNum;
 				setNum := MB_CHANNELS[iCount].iNum;
 				MOV(setFunc <> H10 AND setFunc <> HF, 0, setNum);
 				imbStep := 10;
@@ -112,7 +112,7 @@ CASE imbStep OF
 				FOR iIndex := 0 TO (MB_CHANNELS[iCount].iNum - 1) DO
 					Z5 := MB_CHANNELS[iCount].iDDevNum + iIndex;
 					Z6 := Z5 + MB_CHANNELS[iCount].iNum;
-	
+
 					(* If device was changed *)
 					IF (
 						(MB_CHANNELS[iCount].isRegister = TRUE AND D0Z5 <> D0Z6)
@@ -124,23 +124,23 @@ CASE imbStep OF
 						(* We only support H5, Hf, H6 and H10 function to write. H6 by default *)
 						setFunc := MB_CHANNELS[iCount].iWF;
 						setReg := MB_CHANNELS[iCount].iReg;
-						
+
 						IF MB_CHANNELS[iCount].iWF = H10 OR MB_CHANNELS[iCount].iWF = HF THEN
-							setZ   := MB_CHANNELS[iCount].iDDevNum;
+							setZ := MB_CHANNELS[iCount].iDDevNum;
 							setNum := MB_CHANNELS[iCount].iNum;
 						(* Function H6 *)
 						ELSE
-							setZ   := MB_CHANNELS[iCount].iDDevNum + iIndex;
+							setZ := MB_CHANNELS[iCount].iDDevNum + iIndex;
 							setNum := 0;
 							iAddToReg := iIndex;
 							(* ADDP(TRUE, MB_CHANNELS[iCount].iReg, INT_TO_WORD(), setReg);
-							setReg := MB_CHANNELS[iCount].iReg + INT_TO_WORD(iIndex);*)
+							setReg := MB_CHANNELS[iCount].iReg + INT_TO_WORD(iIndex); *)
 						END_IF;
-	
+
 						lastIndex := iIndex;
 						imbStep := 10;
 					END_IF;
-				END_FOR;			
+				END_FOR;
 			END_IF;
 		END_IF;
 		MB_CHANNELS[iCount].xWriteOnceM := MB_CHANNELS[iCount].xWriteOnce;
@@ -171,9 +171,9 @@ CASE imbStep OF
 			)
 		THEN
 			setFunc := MB_CHANNELS[iCount].iRF;
-			setZ    := MB_CHANNELS[iCount].iDDevNum;
-			setNum  := MB_CHANNELS[iCount].iNum;
-			setReg  := MB_CHANNELS[iCount].iReg;
+			setZ := MB_CHANNELS[iCount].iDDevNum;
+			setNum := MB_CHANNELS[iCount].iNum;
+			setReg := MB_CHANNELS[iCount].iReg;
 
 			imbStep := 10;
 		END_IF;
@@ -198,7 +198,7 @@ CASE imbStep OF
 
 		ADDP(iAddToReg > 0, MB_CHANNELS[iCount].iReg, INT_TO_WORD(iAddToReg), setReg);
 		iAddToReg := 0;
-		
+
 		(* Work with registeres *)
 		ADPRW(
 			xProcess AND mb_Timeout = 0,
@@ -333,7 +333,7 @@ IF xNextChannel THEN
 		END_IF;
 	END_IF;
 	(* If we change channel, we went though all registers in channel *)
-	lastIndex := -1;
+	lastIndex := - 1;
 	(* If we are in channel 0 we whent through all channels at least once and can start writing *)
 	SET((iCount = 0), xAlloWrite);
 END_IF;
