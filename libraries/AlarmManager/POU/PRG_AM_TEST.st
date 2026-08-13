@@ -16,7 +16,9 @@
   the compiler; force the condition inputs and watch the result labels in
   the device monitor.
 *)
+EI(TRUE);
 
+(* Test inputs *)
 (* One-time alarm configuration on the initial pulse *)
 IF M8002 THEN
     fbAMInit(iNum := 0, iSeverity := c_AM_WARNING, iProcess := 1, iDelay := 10,
