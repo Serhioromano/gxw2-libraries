@@ -1,18 +1,20 @@
-IF IN THEN
-	DMOV((NOT INM), TCO_DINT_50, tStart);
+(* Blink timer driven by the global 50 ms ticker TCO_DINT_50.
+   Starts with the LOW phase; Q turns OFF when xIn is FALSE. *)
+IF xIn THEN
+	DMOV(NOT xInMem, TCO_DINT_50, dwStart);
 	CASE iStep OF
-		1: (* HIGH *)
-			tTotal := TCO_50_DIFF(tStart, TCO_DINT_50);
-			DMOV(tTotal >= TIMEHIGH, TCO_DINT_50, tStart);
-			MOV(tTotal >= TIMEHIGH, 0, iStep);
-		0: (* LOW *)
-			tTotal := TCO_50_DIFF(tStart, TCO_DINT_50);
-			DMOV(tTotal >= TIMELOW , TCO_DINT_50, tStart);
-			MOV(tTotal >= TIMELOW , 1, iStep);
+		1: (* HIGH phase *)
+			dwTotal := F_TCO_50_DIFF(dwStart, TCO_DINT_50);
+			DMOV(dwTotal >= dwTimeHigh, TCO_DINT_50, dwStart);
+			MOV(dwTotal >= dwTimeHigh, 0, iStep);
+		0: (* LOW phase *)
+			dwTotal := F_TCO_50_DIFF(dwStart, TCO_DINT_50);
+			DMOV(dwTotal >= dwTimeLow, TCO_DINT_50, dwStart);
+			MOV(dwTotal >= dwTimeLow, 1, iStep);
 	END_CASE;
 ELSE
 	iStep := 0;
 END_IF;
 
-Q := iStep = 1 AND IN;
-INM := IN;
+xQ := iStep = 1 AND xIn;
+xInMem := xIn;

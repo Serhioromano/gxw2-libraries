@@ -1,2 +1,2 @@
-DDIV(TICKER > 1200, TICKER, 1200, tmp);
-TCO_50_TO_MIN := SEL(TICKER > 1200, 0, DINT_TO_INT(tmp[0]));
+(* Convert 50 ms ticker count to minutes: ticks / 1200 *)
+F_TCO_50_TO_MIN := DINT_TO_INT(DWORD_TO_DINT(dwTicker) / 1200);

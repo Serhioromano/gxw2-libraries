@@ -1,2 +1,2 @@
-DDIV(TICKER > 2, TICKER, 2, tmp);
-TCO_50_TO_100MS := SEL(TICKER > 2, 0, tmp[0]);
+(* Convert 50 ms ticker count to 100 ms units: ticks / 2 *)
+F_TCO_50_TO_100MS := DINT_TO_INT(DWORD_TO_DINT(dwTicker) / 2);
