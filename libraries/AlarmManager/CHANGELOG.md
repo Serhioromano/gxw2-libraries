@@ -1,5 +1,11 @@
 # Changelog
 
+## V210 — 2026-08-13
+
+- **Test program:** Extended `PRG_AM_TEST` with event examples. The smoke test now registers four events (IDs 0..3) under manual test inputs: two high-level events (`EventLatch := FALSE`), one latched positive-edge event (`EventLatch := TRUE`), and one positive-edge event. It exercises `FB_AM_EV`, `FB_AM_EVENT_RESET` (manual `xEventReset` input) and `FB_AM_PACK_EVENTS`, packing event states to `D6100` and directly to `M6100..M6105` via `PD := c_AM_PACK_M`. Unused event slots 4..5 are read back to demonstrate that they stay `0`.
+- **CSV:** Added the event FB instances, condition/reset inputs, and packed read-back labels to `PRG_AM_TEST.csv`; updated the `c_AM_EVENTS_NUM` comment in `GVL_AM_TEST.csv` (events are now exercised by the smoke test).
+- **Documentation:** Updated `AlarmManager.md` (abstract, test-program section) and `README.md`.
+
 ## V209 — 2026-08-13
 
 - **Feature:** `FB_AM_PACK_ALARMS` and `FB_AM_PACK_EVENTS` can now pack directly into `M` bit devices. New global constant `c_AM_PACK_M` (value `2`) in `GVL_AM.csv`; passing `PD := c_AM_PACK_M` writes each alarm/event state to its own `M` bit (`M(DNUM + n)` for ID `n`) instead of `D`/`R` registers. The `D`/`R` write branch was changed from `ELSE` to `ELSIF` so an unrecognised `PD` value writes nothing.

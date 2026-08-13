@@ -13,7 +13,7 @@ libraries/
 │   ├── AlarmManager.pdf     # PDF documentation
 │   ├── AlarmManager.sul     # GX Works 2 library file
 │   ├── CHANGELOG.md
-│   ├── README.md
+│   ├── README.md            # Library overview for AI agent
 │   └── POU/                 # Source code (.st + .csv files)
 ├── ModbusDriver/
 │   ├── ModbusDriver.md

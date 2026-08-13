@@ -1,10 +1,14 @@
 (*
-  AlarmManager smoke test (V206).
+  AlarmManager smoke test (V210).
 
-  Registers three alarms (IDs 0..2) under manual test inputs and exercises
-  every alarm function block of the library:
+  Registers three alarms (IDs 0..2) and four events (IDs 0..3) under manual
+  test inputs and exercises every function block of the library:
     FB_AM_INIT / FB_AM_SET / FB_AM_ORISON / FB_AM_RESET
     FB_AM_HAS_ALARMS / FB_AM_IS_BLOCK / FB_AM_BUZZER / FB_AM_PACK_ALARMS
+    FB_AM_EV / FB_AM_EVENT_RESET / FB_AM_PACK_EVENTS
+
+  Alarm and event states are packed to D registers and to M bit devices
+  (PD := c_AM_PACK_M) for direct HMI consumption.
 
   Storage (AM_ALARMS, AM_EVENTS) and capacity constants
   (c_AM_ALARMS_NUM, c_AM_EVENTS_NUM) are declared globally in GVL_AM_TEST
@@ -28,10 +32,6 @@ fbAMSet(iNum := 0, xState := xCondAlarm0);
 fbAMSet(iNum := 1, xState := xCondAlarm1);
 fbAMSet(iNum := 2, xState := xCondAlarm2);
 
-(* Single-alarm state queries - direct array access *)
-xIsOn0 := AM_ALARMS[0].Alarm;
-xIsOn1 := AM_ALARMS[1].Alarm;
-xIsOn2 := AM_ALARMS[2].Alarm;
 
 (* OR-combined query: alarm 0 OR alarm 2 *)
 xOrIsOn := FALSE;
@@ -61,9 +61,41 @@ iPackR := R6000;
 fbAmPack(DNUM := 6000, PD := c_AM_PACK_D);
 iPackD := D6000;
 
-(* Copy the packed word to M bits for HMI-style bit reads *)
+fbAmPack(DNUM := 6000, PD := c_AM_PACK_M);
+xPackM := M6000;
+
+(* Copy the packed word to M bits for HMI-style bit reads
+alternative to above example *)
 BMOV(TRUE, D6000, 1, K4M6000);
 
 xPacked0 := M6000;
 xPacked1 := M6001;
 xPacked2 := M6002;
+
+(*
+  Events: four examples under manual test inputs.
+  Events 0..1 are high-level (follow their condition), event 2 is a latched
+  positive edge (stays until FB_AM_EVENT_RESET), event 3 is a positive edge
+  (auto-clears after the built-in timeout).
+*)
+fbAMEvent(EventNum := 0, EventState := xCondEvent0, EventLatch := FALSE);
+fbAMEvent(EventNum := 1, EventState := xCondEvent1, EventLatch := FALSE);
+fbAMEvent(EventNum := 2, EventState := xCondEvent2, EventLatch := TRUE);
+fbAMEvent(EventNum := 3, EventState := xCondEvent3, EventLatch := FALSE);
+
+(* One-second reset window, driven by the manual event-reset input *)
+fbAMEventReset(IN := xEventReset);
+
+(* Pack event states into a D register block starting at 6100 *)
+fbAmPackEvents(DNUM := 6100, PD := c_AM_PACK_D);
+iPackEventsD := D6100;
+
+(* Pack event states directly to M bit devices: event n -> M(6100 + n) *)
+fbAmPackEvents(DNUM := 6100, PD := c_AM_PACK_M);
+
+xPackedEventM0 := M6100;
+xPackedEventM1 := M6101;
+xPackedEventM2 := M6102;
+xPackedEventM3 := M6103;
+xPackedEventM4 := M6104;
+xPackedEventM5 := M6105;

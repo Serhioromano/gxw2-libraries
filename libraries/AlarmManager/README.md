@@ -22,8 +22,8 @@ POU/
 ├── FB_AM_BUZZER.st / .csv — Check for buzzer-tagged alarms; emits pulse on count increase
 ├── FB_AM_EV.st / .csv     — Create/register an event with optional latch
 ├── FB_AM_EVENT_RESET.st / .csv — Reset all latched events; holds pulse for 1 second
-├── FB_AM_PACK_ALARMS.st / .csv — Pack alarm bits into D/R registers
-├── FB_AM_PACK_EVENTS.st / .csv — Pack event bits into D/R registers
+├── FB_AM_PACK_ALARMS.st / .csv — Pack alarm bits into D/R registers or M devices
+├── FB_AM_PACK_EVENTS.st / .csv — Pack event bits into D/R registers or M devices
 ├── F_AM_DELAY_OUT.st / .csv — Function: delay output using TimeControl
 ├── F_AM_MOVE_TO_M.st / .csv — Function: BMOV wrapper for HMI bit-register transfer
 ├── GVL_AM_TEST.csv        — Test-project global labels: user-declared storage (arrays + capacity constants) for PRG_AM_TEST
@@ -58,7 +58,7 @@ The scan loops use `c_AM_ALARMS_NUM` / `c_AM_EVENTS_NUM` as the upper bound. `FB
 
 ## Test Program (PRG_AM_TEST)
 
-`PRG_AM_TEST` is a compile-and-run smoke test that registers three alarms and exercises every alarm FB of the library (init, set, is-on, or-is-on, reset, has-alarms, is-block, buzzer, pack). It belongs to the `compiler` project and requires the storage declared in `GVL_AM_TEST.csv`. All test labels are auto-assigned by the compiler (no explicit device bindings); force the condition inputs (`xCondAlarm0..2`, `xReset`) and watch the result labels in the device monitor.
+`PRG_AM_TEST` is a compile-and-run smoke test that registers three alarms and four events and exercises every FB of the library (init, set, is-on, or-is-on, reset, has-alarms, is-block, buzzer, pack, event, event-reset, event-pack). It belongs to the `compiler` project and requires the storage declared in `GVL_AM_TEST.csv`. All test labels are auto-assigned by the compiler (no explicit device bindings); force the condition inputs (`xCondAlarm0..2`, `xCondEvent0..3`, `xReset`, `xEventReset`) and watch the result labels in the device monitor. Alarm states are packed to `R6000`/`D6000`/`M6000`; event states are packed to `D6100` and directly to `M6100..M6105` (`PD := c_AM_PACK_M`).
 
 ## POU Naming
 
