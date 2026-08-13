@@ -1,5 +1,10 @@
 # Changelog
 
+## V211 — 2026-08-13
+
+- **Removed:** The `F_AM_MOVE_TO_M` function (files `F_AM_MOVE_TO_M.st` / `.csv` deleted). It wrapped the `BMOV` instruction to copy packed `D` data to `M` bits; since V209 the pack blocks (`FB_AM_PACK_ALARMS`, `FB_AM_PACK_EVENTS`) write directly to the `M` area with `PD := c_AM_PACK_M`, so the helper is no longer needed. Applications that still pack to `D` registers can use the raw `BMOV` instruction (see the HMI Compatibility Note in `FB_AM_PACK_ALARMS`).
+- **Documentation:** Removed the `F_AM_MOVE_TO_M` summary-table row and detail section from `AlarmManager.md`; removed it from the file structure and POU naming list in `README.md`.
+
 ## V210 — 2026-08-13
 
 - **Test program:** Extended `PRG_AM_TEST` with event examples. The smoke test now registers four events (IDs 0..3) under manual test inputs: two high-level events (`EventLatch := FALSE`), one latched positive-edge event (`EventLatch := TRUE`), and one positive-edge event. It exercises `FB_AM_EV`, `FB_AM_EVENT_RESET` (manual `xEventReset` input) and `FB_AM_PACK_EVENTS`, packing event states to `D6100` and directly to `M6100..M6105` via `PD := c_AM_PACK_M`. Unused event slots 4..5 are read back to demonstrate that they stay `0`.

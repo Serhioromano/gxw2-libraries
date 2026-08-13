@@ -25,7 +25,6 @@ POU/
 ├── FB_AM_PACK_ALARMS.st / .csv — Pack alarm bits into D/R registers or M devices
 ├── FB_AM_PACK_EVENTS.st / .csv — Pack event bits into D/R registers or M devices
 ├── F_AM_DELAY_OUT.st / .csv — Function: delay output using TimeControl
-├── F_AM_MOVE_TO_M.st / .csv — Function: BMOV wrapper for HMI bit-register transfer
 ├── GVL_AM_TEST.csv        — Test-project global labels: user-declared storage (arrays + capacity constants) for PRG_AM_TEST
 └── PRG_AM_TEST.st / .csv  — Test program: smoke test that compiles and runs every library FB
 ```
@@ -64,7 +63,7 @@ The scan loops use `c_AM_ALARMS_NUM` / `c_AM_EVENTS_NUM` as the upper bound. `FB
 
 | Prefix | Type | Files |
 |---|---|---|
-| `F_` | Function | F_AM_DELAY_OUT, F_AM_MOVE_TO_M |
+| `F_` | Function | F_AM_DELAY_OUT |
 | `FB_` | Function Block | FB_AM_BUZZER, FB_AM_EV, FB_AM_EVENT_RESET, FB_AM_HAS_ALARMS, FB_AM_INIT, FB_AM_IS_BLOCK, FB_AM_ORISON, FB_AM_PACK_ALARMS, FB_AM_PACK_EVENTS, FB_AM_RESET, FB_AM_SET |
 | `ST_` | Structure | ST_AM_ALARM, ST_AM_EVENT |
 | `GVL_` | Global Variable List | GVL_AM |

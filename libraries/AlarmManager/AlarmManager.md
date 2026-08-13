@@ -1,4 +1,4 @@
-# AlarmManager V210 — Library for Coolmay FX3G PLC
+# AlarmManager V211 — Library for Coolmay FX3G PLC
 
 ## Abstract
 
@@ -72,7 +72,6 @@ The library supports a maximum of **128 alarms** (the fixed array bounds of the 
 | `FB_AM_PACK_ALARMS` | Function Block | Pack alarm states bitwise into `D`/`R` registers or `M` devices |
 | `FB_AM_PACK_EVENTS` | Function Block | Pack event states bitwise into `D`/`R` registers or `M` devices |
 | `F_AM_DELAY_OUT` | Function | Delay output using TimeControl |
-| `F_AM_MOVE_TO_M` | Function | BMOV wrapper for HMI bit-register transfer |
 
 ---
 
@@ -424,26 +423,6 @@ Evaluates whether a configured delay has elapsed between a start time and the cu
 | `Delay` | INPUT | INT | Delay threshold. Unit: `1 = 100 ms`. A value of `0` always returns `TRUE`. |
 
 **Return value:** `TRUE` if the delay has elapsed or `Delay` is zero.
-
----
-
-### `F_AM_MOVE_TO_M`
-
-Wraps the Mitsubishi `BMOV` instruction to copy packed alarm/event data from `D` registers to `M` bit registers for HMI compatibility.
-
-| Variable | Scope | Type | Description |
-| -------- | ----- | ---- | ----------- |
-| `startr` | INPUT | INT | Start `D` register number. |
-| `mnum` | INPUT | INT | Starting `M` device number. |
-
-**Return value:** `TRUE` after the block move completes.
-
-#### Example
-
-```iecst
-F_AM_MOVE_TO_M(startr := 3280, mnum := 3000);
-(* Copies D3280..D3287 to M3000..M3127 *)
-```
 
 ---
 
