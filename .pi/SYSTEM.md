@@ -13,28 +13,28 @@ libraries/
 │   ├── AlarmManager.pdf     # PDF documentation
 │   ├── AlarmManager.sul     # GX Works 2 library file
 │   ├── CHANGELOG.md
-│   ├── README.md            # Library overview for AI agent
+│   ├── AGENT.md            # Library overview for AI agent
 │   └── POU/                 # Source code (.st + .csv files)
 ├── ModbusDriver/
 │   ├── ModbusDriver.md
 │   ├── ModbusDriver.pdf
 │   ├── ModbusDriver.sul
 │   ├── CHANGELOG.md
-│   ├── README.md
+│   ├── AGENT.md
 │   └── POU/                 # Source code (.st + .csv files)
 ├── TimeControl/
 │   ├── TimeControl.md
 │   ├── TimeControl.pdf
 │   ├── TimeControl.sul
 │   ├── CHANGELOG.md
-│   ├── README.md
+│   ├── AGENT.md
 │   └── POU/
 └── Utils/
     ├── Utils.md
     ├── Utils.pdf
     ├── Utils.sul
     ├── CHANGELOG.md
-    ├── README.md
+    ├── AGENT.md
     └── POU/
 ```
 
@@ -44,7 +44,7 @@ libraries/
 | `<LibraryName>.md` | End-user documentation who use this library |
 | `<LibraryName>.pdf` | Documentation in PDF format |
 | `<LibraryName>.sul` | Compiled GX Works 2 library file |
-| `README.md` | Notes for AI agent who edit library files |
+| `AGENT.md` | Notes for AI agent who edit library files |
 | `CHANGELOG.md` | Version history |
 
 ## Conventions

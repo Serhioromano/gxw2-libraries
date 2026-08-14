@@ -8,27 +8,27 @@
 ## V7 — 2026-08-13
 
 - **Test program:** `PRG_TEST_TCO_50` now covers every POU of the library: all 11 conversion/difference functions and both function blocks (`FB_TCO_50_BLINK`, `FB_TCO10`). The blink FB durations are fed from the DWORD converter outputs (`F_SEC_TO_TCO_50`/`F_MIN_TO_TCO_50`) instead of raw literals, so the FB input types are exercised correctly; `F_TCO_50_DIFF` is tested with a `MEP`-triggered save point; `FB_TCO10` is tested with a reset input and both DINT outputs. New CSV labels: `xCapture`, `fbTco10`, `xResetTco`, `diMs10`, `di01ms10`.
-- **Documentation:** updated the test-program entry in `README.md`.
+- **Documentation:** updated the test-program entry in `AGENT.md`.
 
 ## V6 — 2026-08-13
 
 - **Fixed (breaking, code only):** `F_TCO_50_TO_SEC`, `F_TCO_50_TO_100MS`, `F_TCO_50_TO_MIN`, `F_TCO_50_TO_MS`, `F_TCO_50_TO_TIME` no longer use native ST operators (`+`, `/`) or `DWORD_TO_DINT` conversion on the ticker. Native operators do not work on `DWORD` in GX Works 2 ST, and converting the `DWORD` ticker to `DINT` corrupts values above 2³¹ (loses half the range). The converters now use the 32-bit arithmetic instructions on the raw `DWORD` value: `DDIV` for the division converters (SEC/100MS/MIN) and `DMUL` for the multiplication converters (MS/TIME). `F_TCO_50_DIFF` already used `DSUB` and is unchanged.
 - **CSV:** each converter again declares the `dwQuot` temporary (`ARRAY [0..1] OF DINT`) that holds the 32-bit instruction result; the input `dwTicker` (DWORD) is unchanged.
 - **Behavior:** the computation now stays correct for the full `DWORD` ticker range (~6.8 years at 50 ms). The output range limits are unchanged (they come from the documented return types: SEC/100MS/MIN → INT, MS → DINT, TIME → TIME).
-- **Documentation:** updated the arithmetic notes in `README.md` and `TimeControl.md`.
+- **Documentation:** updated the arithmetic notes in `AGENT.md` and `TimeControl.md`.
 
 ## V5 — 2026-08-13
 
 - **Fixed:** `FB_TCO10` rewritten. It is now an elapsed-time accumulator based on `D8010` (current scan time in 0.1 ms units) with a `xReset` BOOL input that holds the accumulator at 0 while TRUE, a `diMs` DINT output (elapsed time in milliseconds, `diTicks / 10`) and a `di01ms` DINT output (elapsed time in raw 0.1 ms units). The old body (`iCounter := D8010 + iCounter`) accumulated into a 16-bit INT with no reset and no typed output; the CSV gained `xReset`, `diMs`, `di01ms` and the `wScan`/`diTicks` locals.
 - **Caveat:** the FB measures elapsed time by summing the scan time each scan — it approximates wall-clock time and misses time spent in interrupt tasks. It is an alternative to the interrupt-driven `PRG_TCO_TICKER_10`/`TCO_DINT_10` ticker for projects without interrupt tasks.
-- **Documentation:** added `FB_TCO10` to the summary table and a detail section in `TimeControl.md`; updated the file-structure entry in `README.md`.
+- **Documentation:** added `FB_TCO10` to the summary table and a detail section in `TimeControl.md`; updated the file-structure entry in `AGENT.md`.
 
 ## V4 — 2026-08-13
 
 - **Feature:** Added `F_MIN_TO_SEC` — converts minutes to seconds; returns INT. Formula: `iMinutes * 60` (computed in DINT, converted to INT). Input: `iMinutes` (INT).
 - **Feature:** Added `F_TCO_50_TO_TIME` — converts a 50 ms ticker value to `TIME` (milliseconds); returns TIME. Formula: `dwTicker * 50`. Input: `dwTicker` (DWORD).
 - **Test program:** `PRG_TEST_TCO_50` now also exercises `F_TCO_50_TO_TIME` (`t3`) and `F_MIN_TO_SEC` (`ii4`); the CSV gained the `t3` TIME and `ii4` INT labels.
-- **Documentation:** Added both functions to the summary table and detail sections of `TimeControl.md`; updated the file structure in `README.md`.
+- **Documentation:** Added both functions to the summary table and detail sections of `TimeControl.md`; updated the file structure in `AGENT.md`.
 
 ## V3 — 2026-08-13
 
