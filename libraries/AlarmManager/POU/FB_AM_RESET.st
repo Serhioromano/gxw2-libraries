@@ -1,12 +1,22 @@
 fbTPReset(IN := MEP(IN), PT := T#500ms);
-IF fbTPReset.Q THEN
+IF fbTPReset.Q OR AutoReset > 0 THEN
 	FOR iCount := 0 TO c_AM_ALARMS_NUM DO
-		IF 
-			AM_ALARMS[iCount].Alarm 
-			AND AM_ALARMS[iCount].Latch
-			AND NOT AM_ALARMS[iCount].State
+		ALARM := AM_ALARMS[iCount];
+		IF
+			ALARM.Alarm
+			AND ALARM.Latch
+			AND NOT ALARM.State
 		THEN
-			AM_ALARMS[iCount].Alarm := FALSE;
+			AM_ALARMS[iCount].Alarm := NOT (
+				fbTPReset.Q
+				OR
+				(
+					AutoReset > 0 
+					AND F_TCO_50_DIFF(ALARM.TimerStart, TCO_DINT_50) 
+						>= INT_TO_DWORD(AutoReset * 20)
+						
+				)
+			);
 		END_IF;
 	END_FOR;
 END_IF;

@@ -6,8 +6,7 @@ ALARM.State := xState;
 DMOV(
 	ALARM.State
 	AND NOT ALARM.Alarm
-	AND NOT ALARM.StateM
-	AND ALARM.Delay > 0, 
+	AND NOT ALARM.StateM, 
 	TCO_DINT_50, 
 	ALARM.TimerStart
 );

@@ -1,5 +1,10 @@
 # AlarmManager — Developer Notes
 
+Посмотри файлы FB_AM_RESET b ST_AM_ALARM я добавил туда параметр автосброса для каждой тервоги. а в блоке сброса смотрю если передано время через которое работает автосброс, то автосбрасывать. Так же в FB_AM_SET я теперь сохраняю время начала тревоги всегда не важно что за тревога с защелкой или нет. Это для автосброса.
+
+Нужно обновить документацию и добавить эти сведения в документацию. Автосброс работает только если на вход AutoReset передать больше чем 0 и это в секунадах.
+
+
 ## Overview
 
 AlarmManager is a Structured Text library for Mitsubishi FX series PLCs (GX Works 2) that provides alarm and event management: registration, filtering, packing, buzzer control, and HMI integration.
