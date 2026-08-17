@@ -236,7 +236,7 @@ CASE imbStep OF
 
 				xHadChanged := FALSE;
 				FOR iIndex := 0 TO (setNum - 1) DO
-					Z3 := CHANNEL.iDDevNum + iIndex ;
+					Z3 := CHANNEL.iDDevNum + iIndex;
 					Z4 := CHANNEL.iDDevNum + CHANNEL.iNum + iIndex;
 					SET(CHANNEL.iWR <> MB_READ AND D0Z3 <> D0Z4, xHadChanged);
 				END_FOR;
