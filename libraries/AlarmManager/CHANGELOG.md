@@ -1,5 +1,13 @@
 # Changelog
 
+## V213 — 2026-08-17
+
+- **Feature (auto-reset):** `FB_AM_RESET` now accepts an `AutoReset` input (INT, seconds). When `AutoReset` is greater than `0`, a registered latched alarm whose `autoReset` flag is set and whose condition has cleared is reset automatically once the elapsed time since its start timestamp (`TimerStart`) reaches `AutoReset` seconds. The elapsed time is measured with `F_TCO_50_DIFF(ALARM.TimerStart, TCO_DINT_50)` against `AutoReset * 20` (50 ms ticks). `AutoReset := 0` disables auto-reset; the manual `IN` pulse resets latched alarms regardless of the flag.
+- **Struct:** Added the per-alarm `autoReset` flag (BOOL) to `ST_AM_ALARM.csv`.
+- **Code:** `FB_AM_INIT` now accepts an `xAutoReset` (BOOL) input and writes it to the alarm's `autoReset` flag; `FB_AM_RESET` gates the auto-reset branch on `ALARM.autoReset`. `FB_AM_SET` records `TimerStart` on every rising edge of the alarm condition (`State AND NOT Alarm AND NOT StateM`), regardless of latching mode or `Delay`, so the timestamp is always available for both delayed registration and auto-reset timing.
+- **CSV:** Added the `AutoReset` input to `FB_AM_RESET.csv`; added the `xAutoReset` input to `FB_AM_INIT.csv`.
+- **Documentation:** Updated `AlarmManager.md` (abstract, `FB_AM_INIT`, `FB_AM_SET`, `FB_AM_RESET`) and `AGENT.md`; corrected the `FB_AM_RESET` / `FB_AM_EVENT_RESET` reset-window description from "one second" to the actual **500 ms**.
+
 ## V212 — 2026-08-13
 
 - **Comments:** Added a header (POU purpose and I/O mapping) and inline comments to `FB_AM_BUZZER.st` explaining the count scan, the edge latch on `Q`, and the one-scan `Reset` pulse. No logic changed.

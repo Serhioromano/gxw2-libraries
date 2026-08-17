@@ -1,8 +1,8 @@
-# AlarmManager V212 — Library for Coolmay FX3G PLC
+# AlarmManager V213 — Library for Coolmay FX3G PLC
 
 ## Abstract
 
-The Alarm Manager library provides alarm and event management for Coolmay FX3G PLCs (GX Works 2): registration, filtering by process and severity, latching, delayed activation, buzzer control, and bit-packed export for HMI panels. Storage is user-defined and proportional to the number of alarms and events actually used. Alarm and event states can be packed into `D`/`R` registers or written directly to `M` bit devices (one bit per alarm/event), the native format for HMI panels that read alarms exclusively from the `M` area. The current version extends the shipped smoke test (`PRG_AM_TEST`) with event examples — high-level and latched-edge events registered under manual inputs — exercising `FB_AM_EV`, `FB_AM_EVENT_RESET`, and `FB_AM_PACK_EVENTS`, including direct packing of event states to `M` devices.
+The Alarm Manager library provides alarm and event management for Coolmay FX3G PLCs (GX Works 2): registration, filtering by process and severity, latching, delayed activation, automatic reset after a configurable timeout, buzzer control, and bit-packed export for HMI panels. Storage is user-defined and proportional to the number of alarms and events actually used. Alarm and event states can be packed into `D`/`R` registers or written directly to `M` bit devices (one bit per alarm/event), the native format for HMI panels that read alarms exclusively from the `M` area. The current version extends the shipped smoke test (`PRG_AM_TEST`) with event examples — high-level and latched-edge events registered under manual inputs — exercising `FB_AM_EV`, `FB_AM_EVENT_RESET`, and `FB_AM_PACK_EVENTS`, including direct packing of event states to `M` devices.
 
 ---
 
@@ -63,7 +63,7 @@ The library supports a maximum of **128 alarms** (the fixed array bounds of the 
 | `FB_AM_INIT` | Function Block | Initialise alarm properties |
 | `FB_AM_SET` | Function Block | Set the condition under which an alarm registers |
 | `FB_AM_ORISON` | Function Block | Test the state of multiple alarms with logical OR |
-| `FB_AM_RESET` | Function Block | Reset all alarms |
+| `FB_AM_RESET` | Function Block | Reset latched alarms (manual or automatic) |
 | `FB_AM_IS_BLOCK` | Function Block | Test for the presence of blocking alarms |
 | `FB_AM_HAS_ALARMS` | Function Block | Test for the presence of any registered alarm |
 | `FB_AM_BUZZER` | Function Block | Test for alarms that trigger the buzzer |
@@ -87,6 +87,7 @@ This function block configures the properties of every alarm the application int
 | `iDelay` | INPUT | INT | Delay before registration. Unit: `1 = 100 ms`. |
 | `xLock` | INPUT | BOOL | Indicates whether this alarm should halt (lock) the process. |
 | `xLatch` | INPUT | BOOL | Indicates whether this alarm is of the latching type. |
+| `xAutoReset` | INPUT | BOOL | Indicates whether this alarm may be reset automatically after the `AutoReset` timeout. |
 | `xBuzzer` | INPUT | BOOL | Indicates whether this alarm should activate the buzzer output. |
 
 #### Alarm Properties
@@ -116,6 +117,10 @@ A locking alarm is one that, when registered, should cause the associated proces
 
 A latching alarm, once registered, remains active even after its triggering condition returns to `FALSE`. It must be cleared manually by an operator reset action. A non-latching alarm is automatically deregistered as soon as its condition becomes `FALSE`.
 
+##### `xAutoReset`
+
+Indicates whether a latching alarm may be reset automatically once the `AutoReset` timeout configured on `FB_AM_RESET` has elapsed since the alarm's condition first became active. Alarms configured with `xAutoReset := FALSE` remain latched until a manual reset pulse is received. The `AutoReset` input must be greater than `0` for auto-reset to occur.
+
 ##### `xBuzzer`
 
 Indicates whether this alarm should trigger the audible buzzer output.
@@ -138,9 +143,9 @@ IF M8002 THEN
     fbAMInit(iNum := 0, iProcess := 1, iSeverity := c_AM_WARNING, iDelay := 2,
         xLock := TRUE, xLatch := FALSE, xBuzzer := TRUE);
 
-    (* No-flame alarm on X10 input *)
+    (* No-flame alarm on X10 input — latched, auto-reset after the AutoReset timeout *)
     fbAMInit(iNum := 1, iProcess := 1, iSeverity := c_AM_ERROR, iDelay := 0,
-        xLock := TRUE, xLatch := TRUE, xBuzzer := TRUE);
+        xLock := TRUE, xLatch := TRUE, xAutoReset := TRUE, xBuzzer := TRUE);
 END_IF;
 ```
 
@@ -151,6 +156,8 @@ END_IF;
 ### `FB_AM_SET`
 
 This function block registers alarm conditions. It must be called on every program scan cycle.
+
+The block records the alarm's start timestamp (`TimerStart`) on every rising edge of the condition, regardless of latching mode. This timestamp is consumed by `F_AM_DELAY_OUT` for delayed registration and by `FB_AM_RESET` for the automatic reset timeout.
 
 | Variable | Scope | Type | Description |
 | -------- | ----- | ---- | ----------- |
@@ -213,11 +220,22 @@ END_IF;
 
 ### `FB_AM_RESET`
 
-Resets all registered alarms. In certain configurations, a single-cycle reset pulse is too brief for the HMI to synchronise with the state change. This function block addresses the issue by holding the reset signal active for a fixed duration of **one second**.
+Resets registered latched alarms. In certain configurations, a single-cycle reset pulse is too brief for the HMI to synchronise with the state change. This function block addresses the issue by holding the reset signal active for a fixed duration of **500 ms**. When the `AutoReset` input is greater than `0`, the block additionally resets latched alarms automatically after a configurable timeout.
 
 | Variable | Scope | Type | Description |
 | -------- | ----- | ---- | ----------- |
 | `IN` | IN_OUT | BOOL | Reset command signal. |
+| `AutoReset` | INPUT | INT | Automatic reset timeout in seconds. `0` disables auto-reset. |
+
+#### Manual reset
+
+The `IN` parameter accepts a momentary pulse or a latched `SET` variable. On a rising edge of `IN`, registered latched alarms (`Latch := TRUE`) whose condition has cleared are reset. After the **500 ms** reset window elapses, the `IN` signal is automatically cleared.
+
+#### Automatic reset
+
+When `AutoReset` is greater than `0`, a registered latched alarm whose `autoReset` flag is set (`xAutoReset := TRUE` in `FB_AM_INIT`) and whose condition has cleared is reset automatically once the time elapsed since its start timestamp (`TimerStart`) reaches `AutoReset` seconds. The elapsed time is measured with the TimeControl function `F_TCO_50_DIFF(ALARM.TimerStart, TCO_DINT_50)`; a value of `0` disables this behaviour entirely.
+
+`FB_AM_SET` records `TimerStart` on every rising edge of the alarm condition, so the timestamp is available for both delayed registration and automatic reset regardless of the alarm's latching mode.
 
 #### Example
 
@@ -229,13 +247,19 @@ VAR
 END_VAR
 ```
 
-Invoke:
+Manual reset only:
 
 ```iecst
 fbAMRst(IN => xReset);
 ```
 
-The `IN` parameter accepts a momentary pulse or a latched `SET` variable. After the one-second reset window elapses, the signal is automatically cleared.
+Manual reset plus automatic reset after **30 seconds**:
+
+```iecst
+fbAMRst(IN => xReset, AutoReset := 30);
+```
+
+With `AutoReset := 30`, a latched alarm configured with `xAutoReset := TRUE` is reset automatically 30 seconds after its condition first became active, without requiring the `IN` pulse.
 
 ---
 
@@ -494,7 +518,7 @@ Resets all event states. This function block is required only when latched event
 | -------- | ----- | ---- | ----------- |
 | `IN` | IN_OUT | BOOL | Reset command signal. |
 
-The `IN` parameter is automatically cleared after **one second**.
+The `IN` parameter is automatically cleared after **500 ms**.
 
 #### Example
 

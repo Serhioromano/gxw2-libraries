@@ -1,9 +1,5 @@
 # AlarmManager — Developer Notes
 
-Посмотри файлы FB_AM_RESET b ST_AM_ALARM я добавил туда параметр автосброса для каждой тервоги. а в блоке сброса смотрю если передано время через которое работает автосброс, то автосбрасывать. Так же в FB_AM_SET я теперь сохраняю время начала тревоги всегда не важно что за тревога с защелкой или нет. Это для автосброса.
-
-Нужно обновить документацию и добавить эти сведения в документацию. Автосброс работает только если на вход AutoReset передать больше чем 0 и это в секунадах.
-
 
 ## Overview
 
@@ -16,17 +12,17 @@ The library does not reserve alarm/event storage. The application declares the s
 ```
 POU/
 ├── GVL_AM.csv             — Global constants (severity levels, pack targets); alarm/event storage is declared by the application (see User Requirements)
-├── ST_AM_ALARM.csv        — AM_ALARM struct definition (latch, lock, buzzer, alarm, state, delay, severity, process, timerStart)
+├── ST_AM_ALARM.csv        — AM_ALARM struct definition (latch, lock, buzzer, alarm, state, stateM, autoReset, delay, severity, process, timerStart)
 ├── ST_AM_EVENT.csv        — AM_EVENT struct definition (state, stateM, event)
 ├── FB_AM_INIT.st / .csv   — Initialise a single alarm's properties; called once at startup
-├── FB_AM_SET.st / .csv    — Evaluate and register an alarm condition; called every scan
+├── FB_AM_SET.st / .csv    — Evaluate and register an alarm condition; records TimerStart on every condition rising edge; called every scan
 ├── FB_AM_ORISON.st / .csv — Function Block: OR-combine multiple alarm states into an accumulator
-├── FB_AM_RESET.st / .csv  — Reset all alarms; holds reset pulse for 1 second
+├── FB_AM_RESET.st / .csv  — Reset all alarms; holds reset pulse for 500 ms; auto-reset after AutoReset seconds (when AutoReset > 0)
 ├── FB_AM_IS_BLOCK.st / .csv — Check for blocking (lock=TRUE) alarms, optionally filtered
 ├── FB_AM_HAS_ALARMS.st / .csv — Check for any registered alarm, optionally filtered
 ├── FB_AM_BUZZER.st / .csv — Check for buzzer-tagged alarms; latches output on count increase until Reset
 ├── FB_AM_EV.st / .csv     — Create/register an event with optional latch
-├── FB_AM_EVENT_RESET.st / .csv — Reset all latched events; holds pulse for 1 second
+├── FB_AM_EVENT_RESET.st / .csv — Reset all latched events; holds pulse for 500 ms
 ├── FB_AM_PACK_ALARMS.st / .csv — Pack alarm bits into D/R registers or M devices
 ├── FB_AM_PACK_EVENTS.st / .csv — Pack event bits into D/R registers or M devices
 ├── F_AM_DELAY_OUT.st / .csv — Function: delay output using TimeControl

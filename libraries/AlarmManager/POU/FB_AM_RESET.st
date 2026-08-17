@@ -11,7 +11,8 @@ IF fbTPReset.Q OR AutoReset > 0 THEN
 				fbTPReset.Q
 				OR
 				(
-					AutoReset > 0 
+					ALARM.autoReset
+					AND AutoReset > 0 
 					AND F_TCO_50_DIFF(ALARM.TimerStart, TCO_DINT_50) 
 						>= INT_TO_DWORD(AutoReset * 20)
 						
