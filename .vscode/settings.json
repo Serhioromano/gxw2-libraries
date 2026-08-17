@@ -1,4 +1,5 @@
 {
     "markdown-pdf.chromium.autoDownload": true,
-    "markdown-pdf.convertOnSave": false
+    "markdown-pdf.convertOnSave": false,
+    "files.autoSave": "afterDelay"
 }
