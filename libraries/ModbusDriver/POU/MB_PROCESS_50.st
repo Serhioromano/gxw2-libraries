@@ -24,6 +24,8 @@ IF MEP(mb_xEnable) THEN
 	END_FOR;
 END_IF;
 
+CHANNEL := MB_CHANNELS[iCount];
+
 (* Delay before start communication *)
 fbTON1(IN := mb_xEnable, PT := T#3s);
 (* Whatchdog timer *)
@@ -31,7 +33,7 @@ fbTON2(IN := imbStep = 10 OR imbStep = 30, PT := INT_TO_TIME(MB_TIMEOUT_TIME * 5
 MOV(fbTON2.Q, iCount, mb_Timeout);
 SET(mb_Timeout >= 0, xNextChannel);
 MOV(mb_Timeout >= 0, 20, imbStep);
-INC(mb_Timeout >= 0, MB_CHANNELS[iCount].iTimeOut);
+INC(mb_Timeout >= 0, CHANNEL.iTimeOut);
 IF imbStep = 20 THEN fbTON2(IN := FALSE); END_IF;
 
 CASE imbStep OF
@@ -60,83 +62,81 @@ CASE imbStep OF
 				END_FOR;
 			END_IF;
 		END_FOR;
-		lastIndex := - 1;
+		lastIndex := -1;
 		iCount := 0;
 		xAlloWrite := FALSE;
 		imbStep := 20;
 
 	20: (* PREPARE *)
-		MB_CHANNELS[iCount].xDone := FALSE;
+		CHANNEL.xDone := FALSE;
 
 		IF xAlloWrite
-			AND MB_CHANNELS[iCount].xEnabled = TRUE
-			AND (MB_CHANNELS[iCount].iWR = MB_READ_WRITE OR MB_CHANNELS[iCount].iWR = MB_WRITE)
+			AND CHANNEL.xEnabled = TRUE
+			AND (CHANNEL.iWR = MB_READ_WRITE OR CHANNEL.iWR = MB_WRITE)
 			AND (
 				(
-					MB_CHANNELS[iCount].iTimeOut >= MB_TIMEOUT_COUNT
-					AND DWORD_TO_INT(F_TCO_50_DIFF(MB_CHANNELS[iCount].tStart, TCO_DINT_50)) >= MB_SUSPEND_RETRY
+					CHANNEL.iTimeOut >= MB_TIMEOUT_COUNT
+					AND DWORD_TO_INT(F_TCO_50_DIFF(CHANNEL.tStart, TCO_DINT_50)) >= MB_SUSPEND_RETRY
 				)
 				OR
 				(
-					MB_CHANNELS[iCount].iTimeOut < MB_TIMEOUT_COUNT
+					CHANNEL.iTimeOut < MB_TIMEOUT_COUNT
 					AND
 					(
-						MB_CHANNELS[iCount].xWriteOnChange = TRUE
+						CHANNEL.xWriteOnChange = TRUE
 						OR
 						(
-							MB_CHANNELS[iCount].xWriteOnChange = FALSE
-							AND MB_CHANNELS[iCount].tCycle > 0
-							AND DWORD_TO_INT(F_TCO_50_DIFF(MB_CHANNELS[iCount].tStart, TCO_DINT_50)) >= MB_CHANNELS[iCount].tCycle
+							CHANNEL.xWriteOnChange = FALSE
+							AND CHANNEL.tCycle > 0
+							AND DWORD_TO_INT(F_TCO_50_DIFF(CHANNEL.tStart, TCO_DINT_50)) >= CHANNEL.tCycle
 						)
 					)
 				)
 				OR
 				(
-					MB_CHANNELS[iCount].xWriteOnce AND NOT MB_CHANNELS[iCount].xWriteOnceM
+					CHANNEL.xWriteOnce AND NOT CHANNEL.xWriteOnceM
 				)
 			)
 		THEN
-			IF MB_CHANNELS[iCount].xWriteOnce AND NOT MB_CHANNELS[iCount].xWriteOnceM THEN
-				setFunc := MB_CHANNELS[iCount].iWF;
-				IF MB_CHANNELS[iCount].isRegister AND MB_CHANNELS[iCount].iNum > 1 THEN
+			IF CHANNEL.xWriteOnce AND NOT CHANNEL.xWriteOnceM THEN
+				setFunc := CHANNEL.iWF;
+				IF CHANNEL.isRegister AND CHANNEL.iNum > 1 THEN
 					setFunc := H10;
 				END_IF;
-				IF NOT MB_CHANNELS[iCount].isRegister AND MB_CHANNELS[iCount].iNum > 1 THEN
+				IF NOT CHANNEL.isRegister AND CHANNEL.iNum > 1 THEN
 					setFunc := HF;
 				END_IF;
 
-				setReg := MB_CHANNELS[iCount].iReg;
-				setZ := MB_CHANNELS[iCount].iDDevNum;
-				setNum := MB_CHANNELS[iCount].iNum;
+				setReg := CHANNEL.iReg;
+				setZ := CHANNEL.iDDevNum;
+				setNum := CHANNEL.iNum;
 				MOV(setFunc <> H10 AND setFunc <> HF, 0, setNum);
 				imbStep := 10;
 			ELSE
-				FOR iIndex := 0 TO (MB_CHANNELS[iCount].iNum - 1) DO
-					Z5 := MB_CHANNELS[iCount].iDDevNum + iIndex;
-					Z6 := Z5 + MB_CHANNELS[iCount].iNum;
+				FOR iIndex := 0 TO (CHANNEL.iNum - 1) DO
+					Z5 := CHANNEL.iDDevNum + iIndex;
+					Z6 := Z5 + CHANNEL.iNum;
 
 					(* If device was changed *)
 					IF (
-						(MB_CHANNELS[iCount].isRegister = TRUE AND D0Z5 <> D0Z6)
+						(CHANNEL.isRegister = TRUE AND D0Z5 <> D0Z6)
 						OR
-						(MB_CHANNELS[iCount].isRegister = FALSE AND M0Z5 <> M0Z6)
+						(CHANNEL.isRegister = FALSE AND M0Z5 <> M0Z6)
 					)
 					(* It was NOT a device we updated previouse cycle *)
 					AND iIndex > lastIndex THEN
 						(* We only support H5, Hf, H6 and H10 function to write. H6 by default *)
-						setFunc := MB_CHANNELS[iCount].iWF;
-						setReg := MB_CHANNELS[iCount].iReg;
+						setFunc := CHANNEL.iWF;
+						setReg := CHANNEL.iReg;
 
-						IF MB_CHANNELS[iCount].iWF = H10 OR MB_CHANNELS[iCount].iWF = HF THEN
-							setZ := MB_CHANNELS[iCount].iDDevNum;
-							setNum := MB_CHANNELS[iCount].iNum;
+						IF CHANNEL.iWF = H10 OR CHANNEL.iWF = HF THEN
+							setZ := CHANNEL.iDDevNum;
+							setNum := CHANNEL.iNum;
 						(* Function H6 *)
 						ELSE
-							setZ := MB_CHANNELS[iCount].iDDevNum + iIndex;
+							setZ := CHANNEL.iDDevNum + iIndex;
 							setNum := 0;
 							iAddToReg := iIndex;
-							(* ADDP(TRUE, MB_CHANNELS[iCount].iReg, INT_TO_WORD(), setReg);
-							setReg := MB_CHANNELS[iCount].iReg + INT_TO_WORD(iIndex); *)
 						END_IF;
 
 						lastIndex := iIndex;
@@ -145,50 +145,58 @@ CASE imbStep OF
 				END_FOR;
 			END_IF;
 		END_IF;
-		MB_CHANNELS[iCount].xWriteOnceM := MB_CHANNELS[iCount].xWriteOnce;
+		CHANNEL.xWriteOnceM := CHANNEL.xWriteOnce;
 
 		(* If we do not have any WRITE task lets read *)
 		IF imbStep = 20
-			AND MB_CHANNELS[iCount].xEnabled = TRUE
-			AND (MB_CHANNELS[iCount].iWR = MB_READ_WRITE OR MB_CHANNELS[iCount].iWR = MB_READ)
+			AND CHANNEL.xEnabled = TRUE
+			AND (CHANNEL.iWR = MB_READ_WRITE OR CHANNEL.iWR = MB_READ)
 			AND (
 				(* In a suspend mode read every MB_SUSPEND_RETRY *)
 				(
-					MB_CHANNELS[iCount].tCycle > 0
-					AND MB_CHANNELS[iCount].iTimeOut >= MB_TIMEOUT_COUNT
-					AND DWORD_TO_INT(F_TCO_50_DIFF(MB_CHANNELS[iCount].tStart, TCO_DINT_50)) >= MB_SUSPEND_RETRY
+					CHANNEL.tCycle > 0
+					AND CHANNEL.iTimeOut >= MB_TIMEOUT_COUNT
+					AND DWORD_TO_INT(F_TCO_50_DIFF(CHANNEL.tStart, TCO_DINT_50)) >= MB_SUSPEND_RETRY
 				)
 				OR
 				(* In a normal mode read every tCycle *)
 				(
-					MB_CHANNELS[iCount].tCycle > 0
-					AND MB_CHANNELS[iCount].iTimeOut < MB_TIMEOUT_COUNT
-					AND DWORD_TO_INT(F_TCO_50_DIFF(MB_CHANNELS[iCount].tStart, TCO_DINT_50)) >= MB_CHANNELS[iCount].tCycle
+					CHANNEL.tCycle > 0
+					AND CHANNEL.iTimeOut < MB_TIMEOUT_COUNT
+					AND DWORD_TO_INT(F_TCO_50_DIFF(CHANNEL.tStart, TCO_DINT_50)) >= CHANNEL.tCycle
 				)
 				OR
 				(* Manual read once *)
 				(
-					MB_CHANNELS[iCount].xReadOnce AND NOT MB_CHANNELS[iCount].xReadOnceM
+					CHANNEL.xReadOnce AND NOT CHANNEL.xReadOnceM
 				)
 			)
 		THEN
-			setFunc := MB_CHANNELS[iCount].iRF;
-			setZ := MB_CHANNELS[iCount].iDDevNum;
-			setNum := MB_CHANNELS[iCount].iNum;
-			setReg := MB_CHANNELS[iCount].iReg;
+			setFunc := CHANNEL.iRF;
+			setZ := CHANNEL.iDDevNum;
+			setNum := CHANNEL.iNum;
+			setReg := CHANNEL.iReg;
 
 			imbStep := 10;
 		END_IF;
-		MB_CHANNELS[iCount].xReadOnceM := MB_CHANNELS[iCount].xReadOnce;
+		CHANNEL.xReadOnceM := CHANNEL.xReadOnce;
 
 		(* Reset first ADPRW call *)
 		RST(imbStep = 10, xProcess);
-		MOV(imbStep = 10, MB_CHANNELS[iCount].iPort, D8397);
-		MOV(imbStep = 10, MB_CHANNELS[iCount].iPort, D8126);
+		MOV(imbStep = 10, CHANNEL.iPort, D8397);
+		MOV(imbStep = 10, CHANNEL.iPort, D8126);
+		MOV(imbStep = 10 AND NOT CHANNEL.isRegister, 30, imbStep);
 
+		(* Multi-item H6/H5 write finished on a write-only channel: there is no                                             
+		read to refresh tStart, so close the cycle here. Read-write/read                                                  
+		channels keep their tStart and let the next read update it. *)                                                    
+        IF imbStep = 20 AND lastIndex >= 0 
+			AND (CHANNEL.iWR = MB_WRITE OR CHANNEL.tCycle = 0) 
+		THEN
+           CHANNEL.tStart := TCO_DINT_50;                           
+        END_IF;    
 		(* If after checking there is nothing to read or write, check another channel *)
 		SET(imbStep = 20, xNextChannel);
-		MOV(imbStep = 10 AND NOT MB_CHANNELS[iCount].isRegister, 30, imbStep);
 
 	10: (* Process registers *)
 		Z5 := setZ;
@@ -198,13 +206,13 @@ CASE imbStep OF
 		BMOV(setFunc = H6, D0Z5, 1, D0Z7);
 		BMOV(setFunc = H10, D0Z5, setNum, D0Z7);
 
-		ADDP(iAddToReg > 0, MB_CHANNELS[iCount].iReg, INT_TO_WORD(iAddToReg), setReg);
+		ADDP(iAddToReg > 0, CHANNEL.iReg, INT_TO_WORD(iAddToReg), setReg);
 		iAddToReg := 0;
 
 		(* Work with registeres *)
 		ADPRW(
 			xProcess AND mb_Timeout = -1,
-			MB_CHANNELS[iCount].iDev, (* Device adress *)
+			CHANNEL.iDev, (* Device adress *)
 			setFunc, (* Function to read *)
 			setReg, (* Register address *)
 			setNum, (* How many registers to read *)
@@ -215,9 +223,9 @@ CASE imbStep OF
 			(* If it was H6 function we updated 1 register *)
 			IF setNum = 0 THEN setNum := 1; END_IF;
 			(* Reset the timeout counter on successful poll *)
-			MB_CHANNELS[iCount].iTimeOut := 0;
+			CHANNEL.iTimeOut := 0;
 
-			Z6 := Z5 + MB_CHANNELS[iCount].iNum;
+			Z6 := Z5 + CHANNEL.iNum;
 
 			(* If we write then move our value to the buffer *)
 			BMOV((setFunc = H6 OR setFunc = H10), D0Z5, setNum, D0Z6);
@@ -228,25 +236,25 @@ CASE imbStep OF
 
 				xHadChanged := FALSE;
 				FOR iIndex := 0 TO (setNum - 1) DO
-					Z3 := MB_CHANNELS[iCount].iDDevNum + iIndex ;
-					Z4 := MB_CHANNELS[iCount].iDDevNum + MB_CHANNELS[iCount].iNum + iIndex;
-					SET(MB_CHANNELS[iCount].iWR <> MB_READ AND D0Z3 <> D0Z4, xHadChanged);
+					Z3 := CHANNEL.iDDevNum + iIndex ;
+					Z4 := CHANNEL.iDDevNum + CHANNEL.iNum + iIndex;
+					SET(CHANNEL.iWR <> MB_READ AND D0Z3 <> D0Z4, xHadChanged);
 				END_FOR;
 
 				Z5 := setZ;
-				Z6 := Z5 + MB_CHANNELS[iCount].iNum;
+				Z6 := Z5 + CHANNEL.iNum;
 				(* Write from buffer to store and then to control value *)
 				BMOV(NOT xHadChanged, D0Z7, setNum, D0Z5);
 				BMOV(NOT xHadChanged, D0Z5, setNum, D0Z6);
 			END_IF;
 			(* Save values *)
 			RST(TRUE, M8029);
-			MB_CHANNELS[iCount].xDone := TRUE;
+			CHANNEL.xDone := TRUE;
 			imbStep := 20;
 
 			(* The only condition we do not go to the next channel *)
-			IF NOT (MB_CHANNELS[iCount].iNum > 1 AND setFunc = H6) THEN
-				MB_CHANNELS[iCount].tStart := TCO_DINT_50;
+			IF NOT (CHANNEL.iNum > 1 AND setFunc = H6) THEN
+				CHANNEL.tStart := TCO_DINT_50;
 				xNextChannel := TRUE;
 			END_IF;
 		END_IF;
@@ -262,7 +270,7 @@ CASE imbStep OF
 		(* Work with coils *)
 		ADPRW(
 			xProcess AND mb_Timeout = -1,
-			MB_CHANNELS[iCount].iDev,
+			CHANNEL.iDev,
 			setFunc,
 			setReg,
 			setNum,
@@ -273,10 +281,10 @@ CASE imbStep OF
 			(* If it was H6 function we updated 1 register *)
 			IF setNum = 0 THEN setNum := 1; END_IF;
 			(* Reset the timeout counter on successful poll *)
-			MB_CHANNELS[iCount].iTimeOut := 0;
+			CHANNEL.iTimeOut := 0;
 
 			(* If we write then move our value to the buffer *)
-			xBit := MBMOV(setFunc = H5 OR setFunc = HF, setZ, setNum, setZ + MB_CHANNELS[iCount].iNum);
+			xBit := MBMOV(setFunc = H5 OR setFunc = HF, setZ, setNum, setZ + CHANNEL.iNum);
 
 			(* If we read *)
 			IF setFunc = H1 OR setFunc = H2 THEN
@@ -285,15 +293,15 @@ CASE imbStep OF
 
 				xHadChanged := FALSE;
 				FOR iIndex := 0 TO (setNum - 1) DO
-					Z3 := MB_CHANNELS[iCount].iDDevNum + iIndex ;
-					Z4 := MB_CHANNELS[iCount].iDDevNum + MB_CHANNELS[iCount].iNum + iIndex;
-					SET(MB_CHANNELS[iCount].iWR <> MB_READ AND M0Z3 <> M0Z4, xHadChanged);
+					Z3 := CHANNEL.iDDevNum + iIndex ;
+					Z4 := CHANNEL.iDDevNum + CHANNEL.iNum + iIndex;
+					SET(CHANNEL.iWR <> MB_READ AND M0Z3 <> M0Z4, xHadChanged);
 				END_FOR;
 
 				IF NOT xHadChanged THEN
-					FOR iIndex := 0 TO MB_CHANNELS[iCount].iNum - 1 DO
+					FOR iIndex := 0 TO CHANNEL.iNum - 1 DO
 						Z5 := setZ + iIndex;
-						Z6 := Z5 + MB_CHANNELS[iCount].iNum;
+						Z6 := Z5 + CHANNEL.iNum;
 
 						iRegsInBIts := SEL(iIndex > 16, 0, (iIndex / 16));
 						iBit := iIndex - (iRegsInBIts * 16);
@@ -306,12 +314,12 @@ CASE imbStep OF
 			END_IF;
 			(* Save values *)
 			RST(TRUE, M8029);
-			MB_CHANNELS[iCount].xDone := TRUE;
+			CHANNEL.xDone := TRUE;
 			imbStep := 20;
 
 			(* The only condition we do not go to the next channel *)
-			IF NOT (MB_CHANNELS[iCount].iNum > 1 AND setFunc = H5) THEN
-				MB_CHANNELS[iCount].tStart := TCO_DINT_50;
+			IF NOT (CHANNEL.iNum > 1 AND setFunc = H5) THEN
+				CHANNEL.tStart := TCO_DINT_50;
 				xNextChannel := TRUE;
 			END_IF;
 		END_IF;
@@ -321,6 +329,7 @@ CASE imbStep OF
 
 END_CASE;
 
+MB_CHANNELS[iCount] := CHANNEL;
 
 (* If switch to next channel mpve index *)
 IF xNextChannel THEN
