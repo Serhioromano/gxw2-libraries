@@ -3,6 +3,9 @@
   MB_CHANNELS and c_MB_CHANNELS_NUM are declared by the application
   in its global label list; the library references them directly.
  *)
+(* Default output: no channel timed out this scan *)
+mb_Timeout := -1;
+
 (* If we disable block, go to to step 0 *)
 MOVP(NOT mb_xEnable, 0, imbStep);
 MOVP(mb_xEnable, 0, imbStep);
@@ -25,10 +28,10 @@ END_IF;
 fbTON1(IN := mb_xEnable, PT := T#3s);
 (* Whatchdog timer *)
 fbTON2(IN := imbStep = 10 OR imbStep = 30, PT := INT_TO_TIME(MB_TIMEOUT_TIME * 50));
-MOV(fbTON2.Q, MB_CHANNELS[iCount].iDev, mb_Timeout);
-SET(mb_Timeout > 0, xNextChannel);
-MOV(mb_Timeout > 0, 20, imbStep);
-INC(mb_Timeout > 0, MB_CHANNELS[iCount].iTimeOut);
+MOV(fbTON2.Q, iCount, mb_Timeout);
+SET(mb_Timeout >= 0, xNextChannel);
+MOV(mb_Timeout >= 0, 20, imbStep);
+INC(mb_Timeout >= 0, MB_CHANNELS[iCount].iTimeOut);
 IF imbStep = 20 THEN fbTON2(IN := FALSE); END_IF;
 
 CASE imbStep OF
@@ -63,7 +66,6 @@ CASE imbStep OF
 		imbStep := 20;
 
 	20: (* PREPARE *)
-		mb_Timeout := 0;
 		MB_CHANNELS[iCount].xDone := FALSE;
 
 		IF xAlloWrite
@@ -201,7 +203,7 @@ CASE imbStep OF
 
 		(* Work with registeres *)
 		ADPRW(
-			xProcess AND mb_Timeout = 0,
+			xProcess AND mb_Timeout = -1,
 			MB_CHANNELS[iCount].iDev, (* Device adress *)
 			setFunc, (* Function to read *)
 			setReg, (* Register address *)
@@ -212,8 +214,8 @@ CASE imbStep OF
 		IF (M8029) THEN
 			(* If it was H6 function we updated 1 register *)
 			IF setNum = 0 THEN setNum := 1; END_IF;
-			(* If prewiosly was timed out, reset *)
-			MOV(MB_CHANNELS[iCount].iTimeOut > 0, 0, MB_CHANNELS[iCount].iTimeOut);
+			(* Reset the timeout counter on successful poll *)
+			MB_CHANNELS[iCount].iTimeOut := 0;
 
 			Z6 := Z5 + MB_CHANNELS[iCount].iNum;
 
@@ -259,7 +261,7 @@ CASE imbStep OF
 
 		(* Work with coils *)
 		ADPRW(
-			xProcess AND mb_Timeout = 0,
+			xProcess AND mb_Timeout = -1,
 			MB_CHANNELS[iCount].iDev,
 			setFunc,
 			setReg,
@@ -270,8 +272,8 @@ CASE imbStep OF
 		IF (M8029) THEN
 			(* If it was H6 function we updated 1 register *)
 			IF setNum = 0 THEN setNum := 1; END_IF;
-			(* If prewiosly was timed out, reset *)
-			MOV(MB_CHANNELS[iCount].iTimeOut > 0, 0, MB_CHANNELS[iCount].iTimeOut);
+			(* Reset the timeout counter on successful poll *)
+			MB_CHANNELS[iCount].iTimeOut := 0;
 
 			(* If we write then move our value to the buffer *)
 			xBit := MBMOV(setFunc = H5 OR setFunc = HF, setZ, setNum, setZ + MB_CHANNELS[iCount].iNum);

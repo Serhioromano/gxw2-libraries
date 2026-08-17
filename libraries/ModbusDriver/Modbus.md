@@ -239,7 +239,7 @@ This function block orchestrates all read and write operations across the config
 | ------------- | ------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `mb_xEnable`  | INPUT  | `BOOL` | Enables channel processing. When `FALSE`, the scheduler resets to its boot state.                                                                                                                                                                                             |
 | `mb_iBuffer`  | INPUT  | `INT`  | Base `D` device number of the scratch buffer used during `ADPRW` transfers. The scratch buffer holds up to `iNum` words for register channels, or `⌈iNum / 16⌉` words for coil channels (one bit per coil). It must not overlap any channel's value or change-tracking buffer. |
-| `mb_Timeout`  | OUTPUT | `INT`  | Modbus slave device address (`iDev`) of the channel that timed out. `0` when no channel has timed out.                                                                                                                                                                        |
+| `mb_Timeout`  | OUTPUT | `INT`  | Channel number (index) of the channel that timed out. Held for one scan; `-1` when no channel has timed out.                                                                                                                                                                        |
 
 ### The `MB_REG_50` Structure
 
@@ -271,7 +271,7 @@ The structure contains user-configurable fields (set by the application) and lib
 | Variable       | Type    | Description                                                              |
 | -------------- | ------- | ------------------------------------------------------------------------ |
 | `tStart`       | `DWORD` | Timestamp of the last completed operation (50 ms ticker).                |
-| `iTimeOut`     | `INT`   | Consecutive-timeout counter used for channel suspension.                 |
+| `iTimeOut`     | `INT`   | Consecutive-timeout counter used for channel suspension. Reset to `0` on every successful poll.                 |
 | `isRegister`   | `BOOL`  | `TRUE` = register channel, `FALSE` = coil channel. Derived from `iRF`/`iWF`. |
 | `xReadOnceM`   | `BOOL`  | Rising-edge memory for `xReadOnce`.                                       |
 | `xWriteOnceM`  | `BOOL`  | Rising-edge memory for `xWriteOnce`.                                      |
@@ -472,3 +472,5 @@ This technique is particularly useful when employing `xWriteOnChange` (rather th
 ## Timeout and Suspension Mechanism
 
 The library implements a channel-suspension policy for fault tolerance. If a channel fails to receive a response for `MB_TIMEOUT_COUNT` consecutive attempts, it is flagged as **suspended**. Once suspended, the channel is polled at a reduced rate — once every `MB_SUSPEND_RETRY` interval. As soon as a valid response is received, the suspension flag is cleared and the channel resumes its normal cycle interval as defined by `MB_CHANNELS[*].tCycle`.
+
+When an `ADPRW` request times out, `MB_PROCESS_50.mb_Timeout` reports the index of the failing channel (0-based) for one scan and is `-1` otherwise. This output can be used to react to a specific channel timing out, e.g. to latch an alarm or log the event.

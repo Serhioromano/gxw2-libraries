@@ -1,5 +1,13 @@
 # Changelog
 
+## V8 — 2026-08-17
+
+- **Code (`MB_PROCESS_50.st`):** `mb_Timeout` now reports the 0-based channel index (`iCount`) of the channel that timed out, instead of the slave device address (`iDev`). The value is held for one scan and defaults to `-1` (no timeout). Removed the in-step-20 reset that previously cleared the value in the same scan, updated the watchdog/`ADPRW` guard conditions from `mb_Timeout > 0` / `mb_Timeout = 0` to `mb_Timeout >= 0` / `mb_Timeout = -1`, and added a per-scan default assignment `mb_Timeout := -1`.
+- **CSV (`MB_PROCESS_50.csv`):** Updated the `mb_Timeout` comment to `Channel number (index) of the channel that timed out for one scan; -1 = none (0-based)`.
+- **Code (`MB_PROCESS_50.st`):** Replaced the conditional timeout-counter reset (`MOV(MB_CHANNELS[iCount].iTimeOut > 0, 0, …)`) with an unconditional `MB_CHANNELS[iCount].iTimeOut := 0;` on every successful `ADPRW` completion (both the register and coil paths).
+- **CSV (`ST_MB_REG_50.csv`):** Updated the `iTimeOut` comment to note that it resets to `0` on every successful poll.
+- **Documentation (`Modbus.md`):** Updated the `mb_Timeout` row in the `MB_PROCESS_50` table, added a note to the Timeout and Suspension Mechanism section describing the new `mb_Timeout` semantics, and clarified that `iTimeOut` resets to `0` on every successful poll.
+
 ## V7 — 2026-08-13
 
 - **Storage model:** Channel storage is no longer reserved by the library. Removed `MB_CHANNELS` from `GVL_MB.csv`. The application must now declare the `MB_CHANNELS` array and the compile-time capacity constant `c_MB_CHANNELS_NUM` (upper bound, last valid index) in its project's global label list, sized to its requirements — the library references them directly.
