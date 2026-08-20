@@ -56,23 +56,23 @@ fbIsBlock(iProcessNum := 2, iSeverity := 0, AC := iBlkProc2, Q := xBlkProc2);
 (* Buzzer query *)
 fbBuzzer(Reset := xBuzzerReset, Q := xBuzzer, AC := iBuzzerCnt);
 
-(* Pack alarm states into R and D register blocks starting at 6000 *)
-fbAmPack(DNUM := 6000, PD := c_AM_PACK_R);
-iPackR := R6000;
+(* Pack alarm states into R and D register blocks starting at 600 *)
+fbAmPack(DNUM := 600, PD := c_AM_PACK_R);
+iPackR := R600;
 
-fbAmPack(DNUM := 6000, PD := c_AM_PACK_D);
-iPackD := D6000;
+fbAmPack(DNUM := 600, PD := c_AM_PACK_D);
+iPackD := D600;
 
-fbAmPack(DNUM := 6000, PD := c_AM_PACK_M);
-xPackM := M6000;
+fbAmPack(DNUM := 600, PD := c_AM_PACK_M);
+xPackM := M600;
 
 (* Copy the packed word to M bits for HMI-style bit reads
 alternative to above example *)
-BMOV(TRUE, D6000, 1, K4M6000);
+BMOV(TRUE, D600, 1, K4M600);
 
-xPacked0 := M6000;
-xPacked1 := M6001;
-xPacked2 := M6002;
+xPacked0 := M600;
+xPacked1 := M601;
+xPacked2 := M602;
 
 (*
   Events: four examples under manual test inputs.
@@ -90,14 +90,14 @@ fbAMEventReset(IN := xEventReset);
 
 (* Pack event states into a D register block starting at 6100 *)
 fbAmPackEvents(DNUM := 6100, PD := c_AM_PACK_D);
-iPackEventsD := D6100;
+iPackEventsD := D610;
 
 (* Pack event states directly to M bit devices: event n -> M(6100 + n) *)
 fbAmPackEvents(DNUM := 6100, PD := c_AM_PACK_M);
 
-xPackedEventM0 := M6100;
-xPackedEventM1 := M6101;
-xPackedEventM2 := M6102;
-xPackedEventM3 := M6103;
-xPackedEventM4 := M6104;
-xPackedEventM5 := M6105;
+xPackedEventM0 := M610;
+xPackedEventM1 := M611;
+xPackedEventM2 := M612;
+xPackedEventM3 := M613;
+xPackedEventM4 := M614;
+xPackedEventM5 := M615;
