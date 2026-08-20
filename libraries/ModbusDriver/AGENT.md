@@ -11,15 +11,15 @@ POU/
 ├── GVL_MB.csv                     — Global constants (access modes, parity, stop bits, baud rates, ports) and timeout globals
 ├── GVL_MB_TEST.csv                — Test-project globals: channel storage (MB_CHANNELS + c_MB_CHANNELS_NUM) and demo value labels (g_iAutoReg*, g_iDemandReg*, g_xCoil*)
 ├── ST_MB_REG_50.csv               — MB_REG_50 struct definition (per-channel configuration)
-├── MB_PORT_SETTINGS.st / .csv     — Function: build the D8120/D8400 port bit-field from parity/stop/baud inputs
-├── MB_MASTER_INIT_PORT2.st / .csv — Function: initialise Modbus master on port 2
-├── MB_MASTER_INIT_PORT3.st / .csv — Function: initialise Modbus master on port 3
-├── MB_SLAVE_INIT_PORT2.st / .csv  — Function: initialise Modbus slave on port 2
-├── MB_SLAVE_INIT_PORT3.st / .csv  — Function: initialise Modbus slave on port 3
-├── MTB_SLAVE_PORT2.st / .csv      — Function: switch port 2 back to Mitsubishi protocol (38400/7/E/1)
-├── MTB_SLAVE_PORT3.st / .csv      — Function: switch port 3 back to Mitsubishi protocol (38400/7/E/1)
-├── MB_PROCESS_50.st / .csv        — Function Block: cycle through the application-declared MB_CHANNELS and issue ADPRW read/write requests
-└── PRG_MB_TEST.st / .csv          — Test/example program exercising the driver
+├── MB_PORT_SETTINGS.iecst / .csv     — Function: build the D8120/D8400 port bit-field from parity/stop/baud inputs
+├── MB_MASTER_INIT_PORT2.iecst / .csv — Function: initialise Modbus master on port 2
+├── MB_MASTER_INIT_PORT3.iecst / .csv — Function: initialise Modbus master on port 3
+├── MB_SLAVE_INIT_PORT2.iecst / .csv  — Function: initialise Modbus slave on port 2
+├── MB_SLAVE_INIT_PORT3.iecst / .csv  — Function: initialise Modbus slave on port 3
+├── MTB_SLAVE_PORT2.iecst / .csv      — Function: switch port 2 back to Mitsubishi protocol (38400/7/E/1)
+├── MTB_SLAVE_PORT3.iecst / .csv      — Function: switch port 3 back to Mitsubishi protocol (38400/7/E/1)
+├── MB_PROCESS_50.iecst / .csv        — Function Block: cycle through the application-declared MB_CHANNELS and issue ADPRW read/write requests
+└── PRG_MB_TEST.iecst / .csv          — Test/example program exercising the driver
 ```
 
 ## Public API
@@ -88,7 +88,7 @@ The application must declare the channel storage in its own global label list, s
 - Channel storage: each channel reserves **2 × `iNum`** devices in the `D` (register) or `M` (coil) area — half for values, half for change tracking. Allocate `iDDevNum` so consecutive channels do not overlap (see `Modbus.md`).
 - `MB_CHANNELS` and `c_MB_CHANNELS_NUM` are user requirements — declared by the application, not the library. Configure the channel fields once at startup (typically under `M8002`).
 - The initialisation functions write Coolmay/Mitsubishi special registers directly (`D8120`, `D8400`, `D8126`, `D8397`, `M8125`, `M8192`, `M8196`, …). These are port-configuration registers — do not rename or re-map them.
-- CSV files are UTF-16LE + BOM, tab-separated, every cell quoted, LF line endings; `.st` files use CRLF.
+- CSV files are UTF-16LE + BOM, tab-separated, every cell quoted, LF line endings; `.iecst` files use CRLF.
 
 ## Test Program (PRG_MB_TEST)
 

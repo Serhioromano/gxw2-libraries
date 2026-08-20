@@ -230,7 +230,7 @@ Follow the same pattern: description → variable tables → examples → notes.
 ## When Updating Documentation
 
 1. Read the existing `.md` file first.
-2. Read the corresponding `.st` source files in `POU/` to verify variable names, types, and logic.
+2. Read the corresponding `.iecst` source files in `POU/` to verify variable names, types, and logic.
 3. Update `CHANGELOG.md` with the new version entry.
 4. Update the Abstract if the library's behaviour has materially changed.
 5. Add or modify FB/Function detail sections as needed.

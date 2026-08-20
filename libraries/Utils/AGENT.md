@@ -9,32 +9,32 @@ Utils is a Structured Text library for Coolmay FX3G PLCs (GX Works 2) providing 
 ```
 POU/
 ├── GVL_UTL.csv                  — Global constants: IP_* register addresses and STYPE_* sensor-type selectors
-├── F_ISBON.st / .csv            — Function: test a bit in a WORD (returns BOOL)
-├── F_DISBON.st / .csv           — Function: test a bit in a DWORD (returns BOOL)
-├── F_SETB.st / .csv             — Function: set a bit in a WORD, return modified WORD
-├── F_DSETB.st / .csv            — Function: set a bit in a DWORD, return modified DWORD
-├── F_RSTB.st / .csv             — Function: reset a bit in a WORD, return modified WORD
-├── F_DRSTB.st / .csv            — Function: reset a bit in a DWORD, return modified DWORD
-├── F_SRB.st / .csv              — Function: set/reset a bit in a WORD by xState
-├── F_DSRB.st / .csv             — Function: set/reset a bit in a DWORD by xState
-├── F_LIMIT.st / .csv            — Function: clamp an INT to [iMin..iMax]
-├── F_SCALE.st / .csv            — Function: linear scale an INT between two INT ranges
-├── F_DSCALE.st / .csv           — Function: linear scale a DINT between two DINT ranges
-├── F_SCALE_NL.st / .csv         — Function: non-linear scale through a D-register point table
-├── F_INCN.st / .csv             — Function: increment an index 0..iMax with wrap
-├── F_SHFT.st / .csv             — Function: shift an index within 0..iMax
-├── F_WORK_LEFT.st / .csv        — Function: progress 100..0 from elapsed/total (INT)
-├── F_WORK_LEFT_TIME.st / .csv   — Function: progress 100..0 from elapsed/total (TIME)
-├── F_VALVE_POS.st / .csv        — Function: valve position % from elapsed/total TIME
-├── F_FLT10.st / .csv            — Function: divide an INT by 10 (returns REAL)
-├── L02_SET_IP.st / .csv       — Function: write L02 IP settings (returns BOOL)
-├── F_MBMOV.st / .csv            — Function: block-move N words between devices (returns BOOL)
-├── FB_HYST.st / .csv            — Function Block: heating on/off regulator with hysteresis
-├── FB_HYST_COOL.st / .csv       — Function Block: cooling on/off regulator with hysteresis
-├── FB_SCALE_AI.st / .csv        — Function Block: scale a host-PLC analog input (D8030 area)
-├── L02_SCALE_AI.st / .csv    — Function Block: scale an L02-module analog input (R23700 area)
-├── FB_VALVE_3P.st / .csv        — Function Block: 3-position valve control with position feedback
-└── PRG_UTL_TEST.st / .csv       — Test program exercising every POU
+├── F_ISBON.iecst / .csv            — Function: test a bit in a WORD (returns BOOL)
+├── F_DISBON.iecst / .csv           — Function: test a bit in a DWORD (returns BOOL)
+├── F_SETB.iecst / .csv             — Function: set a bit in a WORD, return modified WORD
+├── F_DSETB.iecst / .csv            — Function: set a bit in a DWORD, return modified DWORD
+├── F_RSTB.iecst / .csv             — Function: reset a bit in a WORD, return modified WORD
+├── F_DRSTB.iecst / .csv            — Function: reset a bit in a DWORD, return modified DWORD
+├── F_SRB.iecst / .csv              — Function: set/reset a bit in a WORD by xState
+├── F_DSRB.iecst / .csv             — Function: set/reset a bit in a DWORD by xState
+├── F_LIMIT.iecst / .csv            — Function: clamp an INT to [iMin..iMax]
+├── F_SCALE.iecst / .csv            — Function: linear scale an INT between two INT ranges
+├── F_DSCALE.iecst / .csv           — Function: linear scale a DINT between two DINT ranges
+├── F_SCALE_NL.iecst / .csv         — Function: non-linear scale through a D-register point table
+├── F_INCN.iecst / .csv             — Function: increment an index 0..iMax with wrap
+├── F_SHFT.iecst / .csv             — Function: shift an index within 0..iMax
+├── F_WORK_LEFT.iecst / .csv        — Function: progress 100..0 from elapsed/total (INT)
+├── F_WORK_LEFT_TIME.iecst / .csv   — Function: progress 100..0 from elapsed/total (TIME)
+├── F_VALVE_POS.iecst / .csv        — Function: valve position % from elapsed/total TIME
+├── F_FLT10.iecst / .csv            — Function: divide an INT by 10 (returns REAL)
+├── L02_SET_IP.iecst / .csv       — Function: write L02 IP settings (returns BOOL)
+├── F_MBMOV.iecst / .csv            — Function: block-move N words between devices (returns BOOL)
+├── FB_HYST.iecst / .csv            — Function Block: heating on/off regulator with hysteresis
+├── FB_HYST_COOL.iecst / .csv       — Function Block: cooling on/off regulator with hysteresis
+├── FB_SCALE_AI.iecst / .csv        — Function Block: scale a host-PLC analog input (D8030 area)
+├── L02_SCALE_AI.iecst / .csv    — Function Block: scale an L02-module analog input (R23700 area)
+├── FB_VALVE_3P.iecst / .csv        — Function Block: 3-position valve control with position feedback
+└── PRG_UTL_TEST.iecst / .csv       — Test program exercising every POU
 ```
 
 ## Public API
@@ -110,7 +110,7 @@ Constants only — no device-bound variables.
 
 - `F_` = function, `FB_` = function block, `PRG_` = program. FB instances use CamelCase `fb` prefix (`fbHyst : FB_HYST`).
 - Variable names use Hungarian prefixes: `x` BOOL, `i` INT, `di` DINT, `w` WORD, `dw` DWORD, `r` REAL, `t` TIME, `fb` FB instance.
-- CSV files are UTF-16 LE + BOM, tab-separated, every cell quoted, LF line endings; `.st` files use CRLF. Comments in English.
+- CSV files are UTF-16 LE + BOM, tab-separated, every cell quoted, LF line endings; `.iecst` files use CRLF. Comments in English.
 - Functions are called positionally (`result := F_SCALE(50, 0, 100, 0, 1000);`); FBs are called with named arguments (`fbHyst(xIn := …, iSV := …)`). `PRG_UTL_TEST` enforces this style.
 - `F_MBMOV` and `L02_SET_IP` are "command" functions with no return assignment — they always return the default (`FALSE`). Call them for their device side effects, not for a result.
 - `F_FLT10` returns `REAL` (body is `INT_TO_REAL(iIn) / 10.0`) — set the return type to REAL in the GX Works 2 POU properties.

@@ -14,14 +14,14 @@ libraries/
 │   ├── AlarmManager.sul     # GX Works 2 library file
 │   ├── CHANGELOG.md
 │   ├── AGENT.md            # Library overview for AI agent
-│   └── POU/                 # Source code (.st + .csv files)
+│   └── POU/                 # Source code (.iecst + .csv files)
 ├── ModbusDriver/
 │   ├── ModbusDriver.md
 │   ├── ModbusDriver.pdf
 │   ├── ModbusDriver.sul
 │   ├── CHANGELOG.md
 │   ├── AGENT.md
-│   └── POU/                 # Source code (.st + .csv files)
+│   └── POU/                 # Source code (.iecst + .csv files)
 ├── TimeControl/
 │   ├── TimeControl.md
 │   ├── TimeControl.pdf
@@ -40,7 +40,7 @@ libraries/
 
 | File / Folder | Purpose |
 |---|---|
-| `POU/` | Source code — `.st` (Structured Text) and `.csv` (GX Works 2 Label Editor) files |
+| `POU/` | Source code — `.iecst` (Structured Text) and `.csv` (GX Works 2 Label Editor) files |
 | `<LibraryName>.md` | End-user documentation who use this library |
 | `<LibraryName>.pdf` | Documentation in PDF format |
 | `<LibraryName>.sul` | Compiled GX Works 2 library file |
@@ -59,7 +59,7 @@ libraries/
   - `PRG_` — Programs
   - All prefixes are ALL-CAPS, e.g. `FB_<Name>`, `F_<Name>`.
 - **FB instances:** CamelCase with prefix — `fbMotor : FB_MOTOR`.
-- **Every POU produces two files:** `<POU>.st` (code) + `<POU>.csv` (variables).
+- **Every POU produces two files:** `<POU>.iecst` (code) + `<POU>.csv` (variables).
 - **Device addresses:** X, Y, M, D, T, C, Z, V, R (Mitsubishi only).
 - **Startup logic:** Place in `PRG_INIT` with execution condition M8002 set in program/task settings — do not guard with M8002 in code.
 

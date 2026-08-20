@@ -2,7 +2,7 @@
 
 ## V8 — 2026-08-13
 
-- **Fixed compile error C9172:** the test-program TIME labels `t1`, `t2`, `t3` collided with the timer device names `T1`–`T3` (GX Works 2 rejects labels that are a lowercased device name). Renamed to `tSec`, `tMin`, `tTicker` in `PRG_TEST_TCO_50.st` / `.csv`.
+- **Fixed compile error C9172:** the test-program TIME labels `t1`, `t2`, `t3` collided with the timer device names `T1`–`T3` (GX Works 2 rejects labels that are a lowercased device name). Renamed to `tSec`, `tMin`, `tTicker` in `PRG_TEST_TCO_50.iecst` / `.csv`.
 - **Converters aligned:** all `F_TCO_50_TO_*` converters now convert the 32-bit `dwQuot` result with the `DWORD_TO_*` conversions (`DWORD_TO_INT` for SEC/100MS/MIN, `DWORD_TO_DINT` for MS, `DWORD_TO_TIME` for TIME) instead of indexed `dwQuot[0]` access — consistent with the `DWORD_TO_INT(dwQuot)` / `DWORD_TO_TIME(dwQuot)` form used in `F_TCO_50_TO_SEC` / `F_TCO_50_TO_TIME`.
 
 ## V7 — 2026-08-13

@@ -1,6 +1,6 @@
 - Whenever you edit POU files use `gxw2-st` skill. 
 - Always use English for comments
-- After edit any `.st` or `.csv` file update:
+- After edit any `.iecst` or `.csv` file update:
   - `libraryname/CHANGELOG.md` - Changes applied
   - `libraryname/AGENT.md` - Description of this library for the AI agent who develops this library
   - `libraryname/LibraryName.md` - Documentation for END users and AI agents who will build with this library. Use `lib-doc` SKILL to edit it.

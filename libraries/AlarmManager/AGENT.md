@@ -14,20 +14,20 @@ POU/
 ├── GVL_AM.csv             — Global constants (severity levels, pack targets); alarm/event storage is declared by the application (see User Requirements)
 ├── ST_AM_ALARM.csv        — AM_ALARM struct definition (latch, lock, buzzer, alarm, state, stateM, autoReset, delay, severity, process, timerStart)
 ├── ST_AM_EVENT.csv        — AM_EVENT struct definition (state, stateM, event)
-├── FB_AM_INIT.st / .csv   — Initialise a single alarm's properties; called once at startup
-├── FB_AM_SET.st / .csv    — Evaluate and register an alarm condition; records TimerStart on every condition rising edge; called every scan
-├── FB_AM_ORISON.st / .csv — Function Block: OR-combine multiple alarm states into an accumulator
-├── FB_AM_RESET.st / .csv  — Reset all alarms; holds reset pulse for 500 ms; auto-reset after AutoReset seconds (when AutoReset > 0)
-├── FB_AM_IS_BLOCK.st / .csv — Check for blocking (lock=TRUE) alarms, optionally filtered
-├── FB_AM_HAS_ALARMS.st / .csv — Check for any registered alarm, optionally filtered
-├── FB_AM_BUZZER.st / .csv — Check for buzzer-tagged alarms; latches output on count increase until Reset
-├── FB_AM_EV.st / .csv     — Create/register an event with optional latch
-├── FB_AM_EVENT_RESET.st / .csv — Reset all latched events; holds pulse for 500 ms
-├── FB_AM_PACK_ALARMS.st / .csv — Pack alarm bits into D/R registers or M devices
-├── FB_AM_PACK_EVENTS.st / .csv — Pack event bits into D/R registers or M devices
-├── F_AM_DELAY_OUT.st / .csv — Function: delay output using TimeControl
+├── FB_AM_INIT.iecst / .csv   — Initialise a single alarm's properties; called once at startup
+├── FB_AM_SET.iecst / .csv    — Evaluate and register an alarm condition; records TimerStart on every condition rising edge; called every scan
+├── FB_AM_ORISON.iecst / .csv — Function Block: OR-combine multiple alarm states into an accumulator
+├── FB_AM_RESET.iecst / .csv  — Reset all alarms; holds reset pulse for 500 ms; auto-reset after AutoReset seconds (when AutoReset > 0)
+├── FB_AM_IS_BLOCK.iecst / .csv — Check for blocking (lock=TRUE) alarms, optionally filtered
+├── FB_AM_HAS_ALARMS.iecst / .csv — Check for any registered alarm, optionally filtered
+├── FB_AM_BUZZER.iecst / .csv — Check for buzzer-tagged alarms; latches output on count increase until Reset
+├── FB_AM_EV.iecst / .csv     — Create/register an event with optional latch
+├── FB_AM_EVENT_RESET.iecst / .csv — Reset all latched events; holds pulse for 500 ms
+├── FB_AM_PACK_ALARMS.iecst / .csv — Pack alarm bits into D/R registers or M devices
+├── FB_AM_PACK_EVENTS.iecst / .csv — Pack event bits into D/R registers or M devices
+├── F_AM_DELAY_OUT.iecst / .csv — Function: delay output using TimeControl
 ├── GVL_AM_TEST.csv        — Test-project global labels: user-declared storage (arrays + capacity constants) for PRG_AM_TEST
-└── PRG_AM_TEST.st / .csv  — Test program: smoke test that compiles and runs every library FB
+└── PRG_AM_TEST.iecst / .csv  — Test program: smoke test that compiles and runs every library FB
 ```
 
 ## Global Variables (GVL_AM.csv)
@@ -76,7 +76,7 @@ The scan loops use `c_AM_ALARMS_NUM` / `c_AM_EVENTS_NUM` as the upper bound. `FB
 - Startup logic in `FB_AM_INIT` uses `M8002` pulse — set in program/task settings, not guarded in code
 - Storage arrays (`AM_ALARMS`, `AM_EVENTS`) and capacity constants (`c_AM_ALARMS_NUM`, `c_AM_EVENTS_NUM`) are user requirements declared in the project's global label list — not part of `GVL_AM.csv`
 - Comments in English
-- Every POU produces `.st` (code) + `.csv` (variables) files
+- Every POU produces `.iecst` (code) + `.csv` (variables) files
 - CSV files are UTF-16LE encoded for GX Works 2 compatibility
 - Every variable in every POU CSV carries a descriptive English comment (derived from the ST code and AlarmManager.md); keep them in sync when editing code
 - Requires TimeControl V2 library for delay functionality

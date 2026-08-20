@@ -2,16 +2,16 @@
 
 ## V8 — 2026-08-17
 
-- **Code (`MB_PROCESS_50.st`):** `mb_Timeout` now reports the 0-based channel index (`iCount`) of the channel that timed out, instead of the slave device address (`iDev`). The value is held for one scan and defaults to `-1` (no timeout). Removed the in-step-20 reset that previously cleared the value in the same scan, updated the watchdog/`ADPRW` guard conditions from `mb_Timeout > 0` / `mb_Timeout = 0` to `mb_Timeout >= 0` / `mb_Timeout = -1`, and added a per-scan default assignment `mb_Timeout := -1`.
+- **Code (`MB_PROCESS_50.iecst`):** `mb_Timeout` now reports the 0-based channel index (`iCount`) of the channel that timed out, instead of the slave device address (`iDev`). The value is held for one scan and defaults to `-1` (no timeout). Removed the in-step-20 reset that previously cleared the value in the same scan, updated the watchdog/`ADPRW` guard conditions from `mb_Timeout > 0` / `mb_Timeout = 0` to `mb_Timeout >= 0` / `mb_Timeout = -1`, and added a per-scan default assignment `mb_Timeout := -1`.
 - **CSV (`MB_PROCESS_50.csv`):** Updated the `mb_Timeout` comment to `Channel number (index) of the channel that timed out for one scan; -1 = none (0-based)`.
-- **Code (`MB_PROCESS_50.st`):** Replaced the conditional timeout-counter reset (`MOV(MB_CHANNELS[iCount].iTimeOut > 0, 0, …)`) with an unconditional `MB_CHANNELS[iCount].iTimeOut := 0;` on every successful `ADPRW` completion (both the register and coil paths).
+- **Code (`MB_PROCESS_50.iecst`):** Replaced the conditional timeout-counter reset (`MOV(MB_CHANNELS[iCount].iTimeOut > 0, 0, …)`) with an unconditional `MB_CHANNELS[iCount].iTimeOut := 0;` on every successful `ADPRW` completion (both the register and coil paths).
 - **CSV (`ST_MB_REG_50.csv`):** Updated the `iTimeOut` comment to note that it resets to `0` on every successful poll.
 - **Documentation (`Modbus.md`):** Updated the `mb_Timeout` row in the `MB_PROCESS_50` table, added a note to the Timeout and Suspension Mechanism section describing the new `mb_Timeout` semantics, and clarified that `iTimeOut` resets to `0` on every successful poll.
 
 ## V7 — 2026-08-13
 
 - **Storage model:** Channel storage is no longer reserved by the library. Removed `MB_CHANNELS` from `GVL_MB.csv`. The application must now declare the `MB_CHANNELS` array and the compile-time capacity constant `c_MB_CHANNELS_NUM` (upper bound, last valid index) in its project's global label list, sized to its requirements — the library references them directly.
-- **Code:** `MB_PROCESS_50.st` now cycles through `c_MB_CHANNELS_NUM` instead of a hardcoded `29`: the two initialisation `FOR iIndex := 0 TO 29 DO` loops and the next-channel wrap `IF (iCount = 29) THEN` now use `c_MB_CHANNELS_NUM`. Added a header comment explaining the user-declared dependency.
+- **Code:** `MB_PROCESS_50.iecst` now cycles through `c_MB_CHANNELS_NUM` instead of a hardcoded `29`: the two initialisation `FOR iIndex := 0 TO 29 DO` loops and the next-channel wrap `IF (iCount = 29) THEN` now use `c_MB_CHANNELS_NUM`. Added a header comment explaining the user-declared dependency.
 - **CSV:** Updated the `iCount` comment in `MB_PROCESS_50.csv` to reference `c_MB_CHANNELS_NUM`.
 - **Test program:** Added `GVL_MB_TEST.csv` declaring `c_MB_CHANNELS_NUM := 2` and `MB_CHANNELS : ARRAY [0..2] OF MB_REG_50` for `PRG_MB_TEST`.
 - **Test program (revision):** Rewrote `PRG_MB_TEST` to cover all three channel kinds — register automatic read/write (channel 0), register on-demand read-only (channel 1), coils read/write (channel 2). Renamed locals (`Port` → `dwPortSettings`), replaced the undeclared `reg1`–`reg4` with declared global value labels (`g_iAutoReg*`, `g_iDemandReg*`, `g_xCoil*`) in `GVL_MB_TEST.csv`, re-trigger master initialisation with `M8013`, and removed the redundant hard-coded `Port := 2#…` line.
