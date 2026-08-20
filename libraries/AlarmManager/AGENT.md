@@ -79,5 +79,6 @@ The scan loops use `c_AM_ALARMS_NUM` / `c_AM_EVENTS_NUM` as the upper bound. `FB
 - Every POU produces `.iecst` (code) + `.csv` (variables) files
 - CSV files are UTF-16LE encoded for GX Works 2 compatibility
 - Every variable in every POU CSV carries a descriptive English comment (derived from the ST code and AlarmManager.md); keep them in sync when editing code
+- Requires the Utils library (`F_SRB`) for alarm/event bit packing
 - Requires TimeControl V2 library for delay functionality
 - Consumes ~1,400 D registers and ~2,000 M registers from the auto-assigned range in the maximum configuration (128 alarms + 128 events); less with smaller user-declared arrays

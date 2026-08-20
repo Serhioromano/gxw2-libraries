@@ -1,5 +1,10 @@
 # Changelog
 
+## V214 — 2026-08-20
+
+- **Code:** `FB_AM_PACK_ALARMS.iecst` and `FB_AM_PACK_EVENTS.iecst` now call the Utils function `F_SRB` (was `SRB`) to set/reset each alarm/event bit while assembling the packed `D`/`R` register word.
+- **Documentation:** Listed `Utils.sul` as a prerequisite in `AlarmManager.md` and noted the dependency in `AGENT.md`.
+
 ## V213 — 2026-08-17
 
 - **Feature (auto-reset):** `FB_AM_RESET` now accepts an `AutoReset` input (INT, seconds). When `AutoReset` is greater than `0`, a registered latched alarm whose `autoReset` flag is set and whose condition has cleared is reset automatically once the elapsed time since its start timestamp (`TimerStart`) reaches `AutoReset` seconds. The elapsed time is measured with `F_TCO_50_DIFF(ALARM.TimerStart, TCO_DINT_50)` against `AutoReset * 20` (50 ms ticks). `AutoReset := 0` disables auto-reset; the manual `IN` pulse resets latched alarms regardless of the flag.

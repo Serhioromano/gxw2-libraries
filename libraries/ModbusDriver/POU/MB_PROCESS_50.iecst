@@ -284,7 +284,7 @@ CASE imbStep OF
 			CHANNEL.iTimeOut := 0;
 
 			(* If we write then move our value to the buffer *)
-			xBit := MBMOV(setFunc = H5 OR setFunc = HF, setZ, setNum, setZ + CHANNEL.iNum);
+			xBit := F_MBMOV(setFunc = H5 OR setFunc = HF, setZ, setNum, setZ + CHANNEL.iNum);
 
 			(* If we read *)
 			IF setFunc = H1 OR setFunc = H2 THEN
@@ -307,8 +307,8 @@ CASE imbStep OF
 						iBit := iIndex - (iRegsInBIts * 16);
 						Z4 := mb_iBuffer + iRegsInBIts;
 
-						M0Z5 := ISBON(D0Z4, iBit);
-						M0Z6 := ISBON(D0Z4, iBit);
+						M0Z5 := F_ISBON(D0Z4, iBit);
+						M0Z6 := F_ISBON(D0Z4, iBit);
 					END_FOR;
 				END_IF;
 			END_IF;

@@ -25,7 +25,10 @@ The Alarm Manager library provides alarm and event management for Coolmay FX3G P
 
     ![Device Allocation Settings](./img/2025-12-31_16-27-28.png)
 
-3. The **TimeControl V2** library must be installed and configured for the delay functionality to operate correctly.
+3. The following libraries must be installed:
+
+   - `Utils.sul` — the `F_SRB` function is used by `FB_AM_PACK_ALARMS` / `FB_AM_PACK_EVENTS` to assemble the packed `D`/`R` register words.
+   - `TimeControl.sul` (V2) — required for the delay functionality.
 
 ---
 

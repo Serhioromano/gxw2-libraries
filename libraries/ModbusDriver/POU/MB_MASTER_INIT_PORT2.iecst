@@ -1,7 +1,7 @@
 IF MEP(xInit) THEN
-	temp := DSETB(PortSettings, 13);
-	temp := DSETB(temp, 14);
-	temp := DSETB(temp, 15);
+	temp := F_DSETB(PortSettings, 13);
+	temp := F_DSETB(temp, 14);
+	temp := F_DSETB(temp, 15);
 	DMOV(TRUE, temp, D8120);;
 	D8121 := 255; (* Address station *)
 	D8126 := 0; (* ADPRW command *)

@@ -1,5 +1,13 @@
 # Changelog
 
+## V9 — 2026-08-20
+
+- **Code:** Updated Utils function calls to their prefixed names:
+  - `MB_MASTER_INIT_PORT2.iecst`, `MB_MASTER_INIT_PORT3.iecst`, `MB_SLAVE_INIT_PORT2.iecst`: `DSETB` → `F_DSETB`.
+  - `MB_PORT_SETTINGS.iecst`: `DSRB` → `F_DSRB`.
+  - `MB_PROCESS_50.iecst`: `MBMOV` → `F_MBMOV`, `ISBON` → `F_ISBON`.
+- **Documentation:** Noted the Utils dependency in `AGENT.md`.
+
 ## V8 — 2026-08-17
 
 - **Code (`MB_PROCESS_50.iecst`):** `mb_Timeout` now reports the 0-based channel index (`iCount`) of the channel that timed out, instead of the slave device address (`iDev`). The value is held for one scan and defaults to `-1` (no timeout). Removed the in-step-20 reset that previously cleared the value in the same scan, updated the watchdog/`ADPRW` guard conditions from `mb_Timeout > 0` / `mb_Timeout = 0` to `mb_Timeout >= 0` / `mb_Timeout = -1`, and added a per-scan default assignment `mb_Timeout := -1`.
