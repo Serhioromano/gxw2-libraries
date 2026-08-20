@@ -2,7 +2,7 @@
 
 ## Overview
 
-Utils is a Structured Text library for Coolmay FX3G PLCs (GX Works 2) providing general-purpose utility functions and function blocks: bit-level WORD/DWORD manipulation, linear and non-linear scaling, on/off hysteresis regulators, index rotation/shifting, progress calculation, 3-position valve control, analog-input scaling (host PLC and L02 modules), L02 IP configuration, and block memory move.
+Utils is a Structured Text library for Coolmay FX3G PLCs (GX Works 2) providing general-purpose utility functions and function blocks: bit-level WORD/DWORD manipulation, linear and non-linear scaling, on/off hysteresis regulators, index rotation/shifting, progress calculation, 3-position valve control, analog-input scaling (host PLC and L02 modules), L02 IP configuration, and block memory move. L02 POUs have no prefix.
 
 ## File Structure
 
