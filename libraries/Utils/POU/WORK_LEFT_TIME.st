@@ -1,0 +1,2 @@
+(* Progress 100..0 from elapsed TIME ET of TIME TW. Returns INT. *)
+WORK_LEFT_TIME := 100 - DINT_TO_INT(DSCALE(TIME_TO_DINT(ET), 0, TIME_TO_DINT(TW), 0, 100));

@@ -1,0 +1,11 @@
+(* Set/reset bit iBN in DWORD IN by xState. Returns DWORD. *)
+iBN2 := LIMITATION(0,iBN,31);
+IF xState THEN
+	tmp := 2#0000_0000_0000_0000_0000_0000_0000_0001;
+	DROL(TRUE, iBN2, tmp);
+	DSRB := IN OR tmp;
+ELSE
+	tmp := 2#1111_1111_1111_1111_1111_1111_1111_1110;
+	DROL(TRUE, iBN2, tmp);
+	DSRB := IN AND tmp;
+END_IF;
