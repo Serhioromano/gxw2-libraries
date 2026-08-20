@@ -1,481 +1,522 @@
-# Utils for Coolmay FX3G PLC
+# Utils V4 — Library for Coolmay FX3G PLC
 
-## Changelog
+Utils is a library of general-purpose functions and function blocks for Mitsubishi FX3G PLCs programmed in GX Works 2. It provides bit-level WORD/DWORD manipulation, linear and non-linear scaling, on/off hysteresis regulators, index rotation and shifting, progress calculation, a 3-position valve controller, analog-input scaling for the host PLC and L02 modules, and L02 IP configuration.
 
-### V3 01.06.2026
+The functions are stateless: they return their result directly and are designed to be used inside expressions. The function blocks hold internal state and are called every scan.
 
-- add - `INCN` and `SHIFT` functions
+---
 
-## Description
+## Prerequisites
 
-This library provides useful functions and function blocks.
+1. `FB_VALVE_3P` requires the **TimeControl** library: it reads the `TCO_DINT_50` 50 ms ticker, so the TimeControl ticker program must be installed and run in an interrupt task.
 
-This a table on data types in this manual and to what types in GX Works2 it refer.
+---
 
+## Terminology
+
+The manual type names map to GX Works 2 types as follows.
 
 | Type in manual | Type in GX Works 2                       |
 | -------------- | ---------------------------------------- |
-| `INT`          | Word[Signed]                             |
-| `WORD`         | Word[Unsigned]/Bit String[16-bit]        |
-| `DINT`         | Double Word[Signed]                      |
-| `DWORD`        | Double Word[Unsigned]/Bit String[32-bit] |
+| `INT`          | Word [Signed]                            |
+| `WORD`         | Word [Unsigned] / Bit String [16-bit]    |
+| `DINT`         | Double Word [Signed]                     |
+| `DWORD`        | Double Word [Unsigned] / Bit String [32-bit] |
 | `BOOL`         | Bit                                      |
 
+---
 
-## ISBON, DISBON
+## Architectural Description
 
-Function to check if a given bit in a WORD or DWORD is on. There is built-in `BON` instruction, but it does not return the value but store it in a parameter you pass to instruction. This is inconvenient. This functions you can use inside expressions.
+The library is split into two groups of POUs:
 
-| Variable | Scope | Type | Description                             |
-| -------- | ----- | ---- | --------------------------------------- |
-| `IN`     | INPUT | WORD | The WORD to check. `DWORD` for `DISBON` |
-| `BN`     | INPUT | INT  | Bit number starts form 0                |
+- **Functions (`F_`)** — pure, stateless helpers that compute a value from their inputs and return it through the function name. They never access global data and may be nested inside expressions (`IF F_ISBON(D100, 2) THEN … END_IF`).
+- **Function blocks (`FB_`)** — stateful blocks that hold internal state across scans (`FB_HYST`, `FB_VALVE_3P`, `FB_SCALE_AI`). They are declared as instances and called every scan.
+
+Bit-manipulation functions operate on either a 16-bit `WORD` (`F_ISBON`, `F_SETB`, `F_RSTB`, `F_SRB`) or a 32-bit `DWORD` (`F_DISBON`, `F_DSETB`, `F_DRSTB`, `F_DSRB`). They take the device/value to modify and a 0-based bit number, and return the result directly.
+
+Scaling is provided in three forms: linear 16-bit (`F_SCALE`), linear 32-bit (`F_DSCALE`), and non-linear through a point table (`F_SCALE_NL`). Analog inputs are scaled by the dedicated blocks `FB_SCALE_AI` (host PLC, `D8030` area) and `L02_SCALE_AI` (L02 modules, `R23700` area).
+
+---
+
+## Function Blocks and Functions
+
+| Name | Type | Description |
+|------|------|-------------|
+| `F_ISBON` | Function | Test a single bit in a WORD |
+| `F_DISBON` | Function | Test a single bit in a DWORD |
+| `F_SETB` | Function | Set a single bit in a WORD and return the modified WORD |
+| `F_DSETB` | Function | Set a single bit in a DWORD and return the modified DWORD |
+| `F_RSTB` | Function | Reset a single bit in a WORD and return the modified WORD |
+| `F_DRSTB` | Function | Reset a single bit in a DWORD and return the modified DWORD |
+| `F_SRB` | Function | Set or reset a single bit in a WORD by a BOOL |
+| `F_DSRB` | Function | Set or reset a single bit in a DWORD by a BOOL |
+| `F_LIMIT` | Function | Clamp an INT value to a range |
+| `F_SCALE` | Function | Linearly scale an INT between two ranges |
+| `F_DSCALE` | Function | Linearly scale a DINT between two ranges |
+| `F_SCALE_NL` | Function | Non-linearly scale an INT through a point table |
+| `F_INCN` | Function | Increment an index with wrap-around |
+| `F_SHFT` | Function | Shift an index within a range |
+| `F_WORK_LEFT` | Function | Progress 100..0 from elapsed/total (INT units) |
+| `F_WORK_LEFT_TIME` | Function | Progress 100..0 from elapsed/total (TIME) |
+| `F_VALVE_POS` | Function | Valve position 0..1000 from elapsed/total TIME |
+| `F_FLT10` | Function | Divide an INT by 10, returning REAL |
+| `L02_SET_IP` | Function | Write L02 IP settings to R registers |
+| `F_MBMOV` | Function | Block-move N words between devices |
+| `FB_HYST` | Function Block | Heating on/off regulator with hysteresis |
+| `FB_HYST_COOL` | Function Block | Cooling on/off regulator with hysteresis |
+| `FB_SCALE_AI` | Function Block | Scale a host-PLC analog input |
+| `L02_SCALE_AI` | Function Block | Scale an L02-module analog input |
+| `FB_VALVE_3P` | Function Block | 3-position valve control with position feedback |
+
+---
+
+## Bit Functions
+
+### `F_ISBON`
+
+Tests whether a given bit in a `WORD` is ON. The built-in `BON` instruction stores its result in a passed parameter instead of returning it; `F_ISBON` returns the result directly so it can be used inside expressions.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `wIn` | INPUT | WORD | The WORD to check |
+| `iBN` | INPUT | INT | Bit number, 0-based, range 0..15 |
+
+**Example:**
 
 ```iecst
-IF ISBON(D100, 2) THEN
+IF F_ISBON(D100, 2) THEN
     (* The third bit in D100 is ON *)
 END_IF;
 ```
 
-## SETB, DSETB
+### `F_DISBON`
 
-Functions to Sets Bit in a `WORD` or `DWORD` and return modified data.
+DWORD version of `F_ISBON`.
 
-### SETB
-
-| Variable | Scope | Type | Description          |
-| -------- | ----- | ---- | -------------------- |
-| `IN`     | INPUT | WORD | `WORD` to change     |
-| `BN`     | INPUT | INT  | What bit to set 0-15 |
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `dwIn` | INPUT | DWORD | The DWORD to check |
+| `iBN` | INPUT | INT | Bit number, 0-based, range 0..31 |
 
 **Example:**
 
 ```iecst
-VAR
-    wTest : WORD := 2#0000_0000_0000_0000;
-END_VAR
-
-wTest := DSETB(wTest, 15);
-(* dwTest = 2#1000_0000_0000_0000 *)
+IF F_DISBON(D100, 31) THEN
+    (* The highest bit of D100 is ON *)
+END_IF;
 ```
 
-### DSETB
+### `F_SETB`
 
-| Variable | Scope | Type  | Description          |
-| -------- | ----- | ----- | -------------------- |
-| `IN`     | INPUT | DWORD | `DWORD` to change    |
-| `BN`     | INPUT | INT   | What bit to set 0-31 |
+Sets a single bit in a `WORD` and returns the modified WORD. The input is not changed.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `wIn` | INPUT | WORD | WORD to modify |
+| `iBN` | INPUT | INT | Bit number to set, 0..15 |
 
 **Example:**
 
 ```iecst
-VAR
-    dwTest : DWORD := 2#0000_0000_0000_0000_0000_0000_0000_0000;
-END_VAR
-
-dwTest := DSETB(dwTest, 31);
-(* dwTest = 2#1000_0000_0000_0000_0000_0000_0000_0000 *)
+wStatus := F_SETB(wStatus, 3);
+(* Bit 3 of wStatus is now ON *)
 ```
 
-## RSTB, DRSTB
+### `F_DSETB`
 
-Functions to reset Bit in a `WORD` or `DWORD` and return modified data.
+DWORD version of `F_SETB`.
 
-### RSTB
-
-| Variable | Scope | Type | Description            |
-| -------- | ----- | ---- | ---------------------- |
-| `IN`     | INPUT | WORD | `WORD` to change       |
-| `BN`     | INPUT | INT  | What bit to reset 0-15 |
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `dwIn` | INPUT | DWORD | DWORD to modify |
+| `iBN` | INPUT | INT | Bit number to set, 0..31 |
 
 **Example:**
 
 ```iecst
-VAR
-    wTest : WORD := 2#1000_0000_0000_0000;
-END_VAR
-
-wTest := DRSTB(wTest, 15);
-(* dwTest = 2#0000_0000_0000_0000 *)
+dwStatus := F_DSETB(dwStatus, 31);
 ```
 
-### DRSTB
+### `F_RSTB`
 
-| Variable | Scope | Type  | Description            |
-| -------- | ----- | ----- | ---------------------- |
-| `IN`     | INPUT | DWORD | `DWORD` to change      |
-| `BN`     | INPUT | INT   | What bit to reset 0-31 |
+Resets a single bit in a `WORD` and returns the modified WORD. The input is not changed.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `wIn` | INPUT | WORD | WORD to modify |
+| `iBN` | INPUT | INT | Bit number to reset, 0..15 |
 
 **Example:**
 
 ```iecst
-VAR
-    dwTest : DWORD := 2#1000_0000_0000_0000_0000_0000_0000_0000;
-END_VAR
-
-dwTest := DRSTB(dwTest, 31);
-(* dwTest = 2#0000_0000_0000_0000_0000_0000_0000_0000 *)
+wStatus := F_RSTB(wStatus, 3);
+(* Bit 3 of wStatus is now OFF *)
 ```
 
-## SRB, DSRB
+### `F_DRSTB`
 
-Functions to Sets or reset Bit in a `WORD` or `DWORD` and return modified data.
+DWORD version of `F_RSTB`.
 
-### SRB
-
-| Variable | Scope | Type | Description            |
-| -------- | ----- | ---- | ---------------------- |
-| `IN`     | INPUT | WORD | `WORD` to change       |
-| `iBN`    | INPUT | INT  | What bit to reset 0-15 |
-| `xState` | INPUT | BOOL | Set if 1, reset if 0   |
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `dwIn` | INPUT | DWORD | DWORD to modify |
+| `iBN` | INPUT | INT | Bit number to reset, 0..31 |
 
 **Example:**
 
 ```iecst
-VAR
-    wTest : WORD := 2#1000_0000_0000_0000;
-END_VAR
-
-wTest := DSRB(wTest, 15, 0);
-wTest := DSRB(wTest, 0, 1);
-(* dwTest = 2#0000_0000_0000_0001 *)
+dwStatus := F_DRSTB(dwStatus, 31);
 ```
 
-### DSRB
+### `F_SRB`
 
-| Variable | Scope | Type  | Description            |
-| -------- | ----- | ----- | ---------------------- |
-| `IN`     | INPUT | DWORD | `DWORD` to change      |
-| `iBN`    | INPUT | INT   | What bit to reset 0-31 |
-| `xState` | INPUT | BOOL  | Set if 1, reset if 0   |
+Sets or resets a single bit in a `WORD` depending on `xState` and returns the modified WORD.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `wIn` | INPUT | WORD | WORD to modify |
+| `iBN` | INPUT | INT | Bit number, 0..15 |
+| `xState` | INPUT | BOOL | `TRUE` = set the bit, `FALSE` = reset the bit |
 
 **Example:**
 
 ```iecst
-VAR
-    dwTest : DWORD := 2#1000_0000_0000_0000_0000_0000_0000_0000;
-END_VAR
-
-dwTest := DSRB(dwTest, 31, 0);
-dwTest := DSRB(dwTest, 0, 1);
-(* dwTest = 2#0000_0000_0000_0000_0000_0000_0000_0001 *)
+wStatus := F_SRB(wStatus, 15, TRUE);  (* set bit 15 *)
+wStatus := F_SRB(wStatus, 0, FALSE);  (* reset bit 0 *)
 ```
 
-## Regulators HYST, HYST_COOL
+### `F_DSRB`
 
-### HYST (FB)
+DWORD version of `F_SRB`.
 
-On\Off regulator function block for heating logic. It turns off when `iPV` become lower that `iSV`.
-
-| Variable | Scope  | Type | Description      |
-| -------- | ------ | ---- | ---------------- |
-| `xIn`    | INPUT  | BOOL | Enable regulator |
-| `iSV`    | INPUT  | INT  | Set value        |
-| `iPV`    | INPUT  | INT  | Processed value  |
-| `iDV`    | INPUT  | INT  | Delta            |
-| `Q`      | OUTPUT | BOOL | ON or OFF        |
-
-Here is an example how you can get a temperature on an `AD0` and use it in hysteresis regulator to control heater on `Y0` output.
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `dwIn` | INPUT | DWORD | DWORD to modify |
+| `iBN` | INPUT | INT | Bit number, 0..31 |
+| `xState` | INPUT | BOOL | `TRUE` = set the bit, `FALSE` = reset the bit |
 
 **Example:**
 
 ```iecst
-fbHYST(
-    xIn := xStart,
-    iSV := 255, (* Set value is 25.5 *)
-    iPV := AI_Temperature,
-    iDV := 2, (* Delat is 0.2 *)
-    Q := Y0
-);
+dwStatus := F_DSRB(dwStatus, 31, TRUE);
 ```
 
-### HYST_COOL (FB)
+---
 
-This is same Function Block it only logic in reverse. It turns off when `iPV` become bigger that `iSV`.
+## Value and Index Functions
 
-## WORK_LEFT, WORK_LEFT_TIME
+### `F_LIMIT`
 
-### WORK_LEFT_TIME
+Clamps `iIn` to the range `[iMin..iMax]` and returns the clamped value.
 
-Function to create a progress bar for a process to backward countdown from 100 to 0.
-
-| Variable | Scope | Type | Description        |
-| -------- | ----- | ---- | ------------------ |
-| `ET`     | INPUT | TIME  | Elapsed time       |
-| `TW`     | INPUT | TIME  | Total time to work |
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `iMax` | INPUT | INT | Upper limit |
+| `iIn` | INPUT | INT | Value to clamp |
+| `iMin` | INPUT | INT | Lower limit |
 
 **Example:**
 
 ```iecst
-fbTON(IN := xStart, PT := T#5m);
-iTimeLeft := WORK_LEFT_TIME(fbTON.ET, fbTON.PT);
+iValue := F_LIMIT(100, iValue, 0);
+(* iValue is now within 0..100 *)
 ```
 
-### WORK_LEFT
+### `F_SCALE`
 
-Function to create a progress bar for a process to backward countdown from 100 to 0.
-It is a same timer but accept abstract units for time. Those might be seconds, or 100ms intervals like to `OUT_T` timers.
+Linearly scales `iVal` from the input range `iInLow..iInHigh` to the output range `iOutLow..iOutHigh` and returns the result as an `INT`. The input value is first clamped to the input range; the result is clamped to the output range.
 
-| Variable | Scope | Type | Description        |
-| -------- | ----- | ---- | ------------------ |
-| `ET`     | INPUT | INT  | Elapsed time       |
-| `TW`     | INPUT | INT  | Total time to work |
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `iVal` | INPUT | INT | Value to scale |
+| `iInLow` | INPUT | INT | Input range minimum |
+| `iInHigh` | INPUT | INT | Input range maximum |
+| `iOutLow` | INPUT | INT | Output range minimum |
+| `iOutHigh` | INPUT | INT | Output range maximum |
+
+**Example:**
+
+```iecst
+D8052 := F_SCALE(iPidTask, 0, 100, 0, 4000);
+```
+
+`iPidTask` holds 0..100 and `D8052` is the system register that controls analog output `DA2`, which accepts 0..4000.
+
+### `F_DSCALE`
+
+DINT version of `F_SCALE`: linearly scales a `DINT` between two `DINT` ranges and returns a `DINT`.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `diVal` | INPUT | DINT | Value to scale |
+| `diInLow` | INPUT | DINT | Input range minimum |
+| `diInHigh` | INPUT | DINT | Input range maximum |
+| `diOutLow` | INPUT | DINT | Output range minimum |
+| `diOutHigh` | INPUT | DINT | Output range maximum |
+
+**Example:**
+
+```iecst
+diResult := F_DSCALE(diVacuumSensor, 0, 32000, 0, 100000);
+```
+
+This scales a vacuum sensor from 0..32000 raw units to 0..100000 Pa.
+
+### `F_SCALE_NL`
+
+Non-linearly scales `iPV` through a point table stored in consecutive D registers. The table starts at `iDStart`: the first register holds the number of points `iPN`, the next `iPN` registers hold the X coordinates, and the following `iPN` registers hold the Y coordinates.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `iPN` | INPUT | INT | Number of points |
+| `iDStart` | INPUT | INT | First device of the point table |
+| `iPV` | INPUT | INT | Process value on the X scale to convert to Y |
+
+For a 5-point table starting at `D100`:
+
+```
+D100 = 5      (number of points)
+D101..D105 = X1..X5
+D106..D110 = Y1..Y5
+```
+
+**Example:**
+
+```iecst
+D200 := F_SCALE_NL(5, 100, iPv);
+```
+
+![Non-linear scaling graph](./img/2023-12-17_15-40-23.png)
+
+> **Note:** `F_SCALE_NL` writes the point count to `D(iDStart)` on every call and reads the X/Y coordinates through index registers. When a Coolmay panel is used, an XY Graph element can be pointed at the same `D100` register to draw the curve.
+
+### `F_INCN`
+
+Increments an index `iCur` by 1 when `xIn` is `TRUE`, wrapping to `0` after `iMax`. The result is returned.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `xIn` | INPUT | BOOL | Increment trigger |
+| `iCur` | INPUT | INT | Current index |
+| `iMax` | INPUT | INT | Maximum index (wrap point) |
+
+**Example:**
+
+```iecst
+iCount := F_INCN(TRUE, iCount, 2);
+```
+
+`iCount` rotates `0, 1, 2, 0, 1, 2, …` each scan.
+
+### `F_SHFT`
+
+Shifts an index `iIdx` by `iShifter` within the range `0..iMax`, wrapping around. It is used to rotate the starting index of an array (e.g. a cascade of pumps or heaters).
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `iShifter` | INPUT | INT | Amount to shift by |
+| `iIdx` | INPUT | INT | Current index |
+| `iMax` | INPUT | INT | Maximum index |
+
+**Example:**
+
+```iecst
+iShiftedCount := F_SHFT(iShifter, iCount, 2);
+```
+
+With an array of 3 pumps, `iShifter` values of `0, 1, 2` make `iShiftedCount` start the cascade at index `0`, `1`, or `2` respectively.
+
+---
+
+## Progress and Time Functions
+
+### `F_WORK_LEFT`
+
+Computes the remaining progress of a process as a backward countdown from 100 to 0, given the elapsed and total time in abstract units (seconds, 100 ms ticks, etc.).
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `iEt` | INPUT | INT | Elapsed time |
+| `iTw` | INPUT | INT | Total time |
 
 **Example:**
 
 ```iecst
 OUT_T(xStart, TC0, 200);
-iTimeLeft := WORK_LEFT(TN0, 200);
+iTimeLeft := F_WORK_LEFT(TN0, 200);
 ```
 
-## INCN SHIFT
+### `F_WORK_LEFT_TIME`
 
-### INCN
-
-There 2 functions were made for shitting primary array index.
-
-| Variable | Scope | Type | Description    |
-| -------- | ----- | ---- | -------------- |
-| `IN`     | INPUT | BOOL | Make increment |
-| `CUR`    | INPUT | INT  | Current number |
-| `MAX`    | INPUT | INT  | Maximum number |
-
-**Example:**
-
-```iecst
-iCount := INCN(TRUE, iCOunt, 2);
-```
-
-In this example `iCount` will rotate 0, 1, 2, 0, 1, 2, .... each PLC cycle.
-
-### SHIFT
-
-This function shifts number within range
-
-| Variable  | Scope | Type | Description           |
-| --------- | ----- | ---- | --------------------- |
-| `SHIFTER` | INPUT | INT  | For how many to shift |
-| `IDX`     | INPUT | INT  | Current number        |
-| `MAX`     | INPUT | INT  | Maximum number        |
-
-**Example:**
-
-Main idea was this. Let's say you have an array of pumps or heaters and you start one by one as cascade. It means that pump in array index 0 will be always first and then next index and so on. What we want that from time to time we **shift** array index that we start.
-
-Let's say we have array of 3 pumps.
-
-```iecst
-iPumpsToStart := 2;
-CASE iStep OF
-10:
-    MOV(xStart, 20, iStep);
-    iShifter := INCN(iStep = 20, iCount, 2);
-
-20:
-    iStartedPumps := 0;
-    FOR iCount := 0 TO 2 DO
-        iShiftedCount := SHIFT(iShifter, iCount, 2);
-
-        arPumps[iShiftedCount].xStart := iPumpsToStart > iStartedPumps;
-        INC(arPumps[iShiftedCount].xStart, iStartedPumps);
-    END_FOR;
-END_CASE;
-```
-
-1. Every time we change from step 10 to step 20, `iShifter` will be incremented. When we do that first time `iShifter` = 1.
-2. In step 20 `iCount` will rotate numbers 0, 1, 2 but `iShiftedCount` will rotate 1, 2, 0. It will start with array index 1 as first. 
-3. Next time we go from 10 to 20 `iShifter` = 2 and `iShiftedCount` will rotate 2, 0, 1. Now 3d pump will be main to start.
-
-## Helpers
-
-### L02_SET_IP
-
-This function helps to initialize IP settings for L02 PLC.
-
-| Variable | Scope  | Type | Description             |
-| -------- | ------ | ---- | ----------------------- |
-| `Init`   | INPUT  | BOOL | Command to set          |
-| `wts`    | INPUT  | INT  | What type of IP address |
-| `IP1`    | INPUT  | INT  | First IP number         |
-| `IP2`    | INPUT  | INT  | Second IP number        |
-| `IP3`    | OUTPUT | INT  | Third IP number         |
-| `IP4`    | OUTPUT | INT  | Forth IP number         |
-
-**Types of IP:**
-
-- `IP_PLC_IP` - IP address of a PLC
-- `IP_PLC_GATEWAY` - PLC Gateway
-- `IP_PLC_MASK` - PLC Mask
-- `IP_REMOTE1` - Address of first remote EIP coupler
-- `IP_REMOTE2` - Address of second remote EIP coupler
-- `IP_REMOTE3` - Address of third remote EIP coupler
-- `IP_REMOTE4` - Address of forth remote EIP coupler
-
-**Example:**
-
-```iecst
-M0 := L02_SET_IP(xSaveSettings, IP_PLC_IP, 192, 168, 0, 100);
-M0 := L02_SET_IP(xSaveSettings, IP_PLC_GATEWAY, 192, 168, 0, 1);
-M0 := L02_SET_IP(xSaveSettings, IP_PLC_MASK, 255, 255, 255, 0);
-```
-
-This is example how to setup network settings of L02 PLC ethernet port.
-
-## VALVE_3P
-
-Function to control 3 position valve with PID. It is not and a pulse regulator but regulator with constant position search.
-
-> Important !!!
-> **This function required TimeControl library and TCO timer setup**
+TIME version of `F_WORK_LEFT`.
 
 | Variable | Scope | Type | Description |
-| --- | --- | --- | --- |
-| `ENABLE` | INPUT | BOOL | Start valve control |
-| `SV` | INPUT | INT | Set valve position. It is 0-1000. Best configure PID task output to be 0-1000, If you created 0-100 output for PID, multiply it by 10. |
-| `TOTAL_TIME` | INPUT | INT | Total time it takes for valve to move from fully CLOSED position to fully OPEN. Make it little Bit bigger (2%) |
-| `LUFT_TIME` | INPUT | INT | Time required to move on direction change for valve to start moving. |
-| `DLT` | INPUT | INT | Hysteresis for regulator to create non sense area. If difference between `SV` and current position is less that this value we do not move valve. It may reduce number of position changes when it is almost at the spot and save motor resources. |
-| `CLOSE_ON_DISABLE` | INPUT | BOOL | When we turn off control with `Enabled := FALSE` should we close valve or leave it in a current position? |
-| `IS_OPENED` | INPUT | BOOL | Feedback from valve |
-| `IS_CLOSED` | INPUT | BOOL | Feedback from valve |
-| `OPEN` | OUTPUT | BOOL | Open valve signal |
-| `CLOSE` | OUTPUT | BOOL | Close valve signal |
-
+|----------|-------|------|-------------|
+| `tEt` | INPUT | TIME | Elapsed time |
+| `tTw` | INPUT | TIME | Total time |
 
 **Example:**
 
 ```iecst
-Valve_3p1(
-    ENABLE := X0,
-    SV := iPidTask, 
-    DLT := 50, (* 5.0% *)
-    TOTAL_TIME := 10,
-    LUFT_TIME := 500,
-    CLOSE_ON_DISABLE := TRUE,
-    IS_OPENED := X2,
-    IS_CLOSED := X3,
-    OPEN := Y0,
-    CLOSE := Y1
+fbTON(IN := xStart, PT := T#5m);
+iTimeLeft := F_WORK_LEFT_TIME(fbTON.ET, fbTON.PT);
+```
+
+### `F_VALVE_POS`
+
+Returns the current valve position as a percentage `0..1000` (`0.0..100.0 %`) from the elapsed travel time and the total travel time.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `tCt` | INPUT | TIME | Current (elapsed) time |
+| `tTt` | INPUT | TIME | Total travel time |
+
+**Example:**
+
+```iecst
+iPosition := F_VALVE_POS(tElapsed, tTotal);
+```
+
+---
+
+## Other Functions
+
+### `F_FLT10`
+
+Divides an `INT` by 10 and returns the result as a `REAL`.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `iIn` | INPUT | INT | Input value |
+
+**Example:**
+
+```iecst
+rResult := F_FLT10(123);   (* 12.3 *)
+```
+
+> **Note:** `F_FLT10` returns `REAL`; set the function return type to `REAL` in the GX Works 2 POU properties.
+
+### `L02_SET_IP`
+
+Writes an L02 PLC IP setting (PLC IP, gateway, mask, or remote EIP coupler) into the corresponding R register while `xInit` is `TRUE`.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `xInit` | INPUT | BOOL | Trigger to write the setting |
+| `iWts` | INPUT | INT | Setting type — one of the `IP_*` constants |
+| `wIp1` | INPUT | WORD | IP octet 1 |
+| `wIp2` | INPUT | WORD | IP octet 2 |
+| `wIp3` | INPUT | WORD | IP octet 3 |
+| `wIp4` | INPUT | WORD | IP octet 4 |
+
+Setting types:
+
+- `IP_PLC_IP` — IP address of the PLC
+- `IP_PLC_GATEWAY` — PLC gateway
+- `IP_PLC_MASK` — PLC subnet mask
+- `IP_REMOTE1` … `IP_REMOTE4` — remote EIP coupler addresses
+
+**Example:**
+
+```iecst
+xDone := L02_SET_IP(xSaveSettings, IP_PLC_IP, 16#00C0, 16#00A8, 16#0000, 16#0064);
+xDone := L02_SET_IP(xSaveSettings, IP_PLC_GATEWAY, 16#00C0, 16#00A8, 16#0000, 16#0001);
+xDone := L02_SET_IP(xSaveSettings, IP_PLC_MASK, 16#00FF, 16#00FF, 16#00FF, 16#0000);
+```
+
+> **Note:** `L02_SET_IP` performs no return assignment, so its result is always the default (`FALSE`). It is used for its device side effect (writing the R registers).
+
+### `F_MBMOV`
+
+Block-moves `iNum` words from a source device to a destination device while `xEnable` is `TRUE`. The source and destination are given by device number (e.g. `100` = `D100`).
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `xEnable` | INPUT | BOOL | Enable the move |
+| `iSrc` | INPUT | INT | Source device number |
+| `iNum` | INPUT | INT | Number of words to move |
+| `iDst` | INPUT | INT | Destination device number |
+
+**Example:**
+
+```iecst
+xDone := F_MBMOV(TRUE, 100, 4, 200);
+(* Copies D100..D103 to D200..D203 *)
+```
+
+> **Note:** `F_MBMOV` performs no return assignment, so its result is always the default (`FALSE`). It is used for its device side effect.
+
+---
+
+## Regulators
+
+### `FB_HYST`
+
+On/off regulator function block for heating logic. It turns the output off when `iPV` drops below `iSV`, and on when `iPV` rises above `iSV + iDV`.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `xIn` | INPUT | BOOL | Enable regulator |
+| `iSV` | INPUT | INT | Set value |
+| `iPV` | INPUT | INT | Process value |
+| `iDV` | INPUT | INT | Delta (hysteresis band) |
+| `xQ` | OUTPUT | BOOL | Regulator output |
+
+**Example:**
+
+```iecst
+VAR
+    fbHYST : FB_HYST;
+END_VAR
+
+fbHYST(
+    xIn := xStart,
+    iSV := 255,           (* Set value is 25.5 *)
+    iPV := AI_Temperature,
+    iDV := 2,             (* Delta is 0.2 *)
+    xQ := Y0
 );
 ```
 
-## SCALE, DSCALE, SCALE_NL
+### `FB_HYST_COOL`
 
-General functions scale value from one range to another range.
+Cooling version of `FB_HYST` — the logic is reversed: it turns the output off when `iPV` rises above `iSV`.
 
-### SCALE
-
-Function to scale one value to another range proportionally and returns result as `INT`.
-
-| Variable  | Scope  | Type | Description           |
-| --------- | ------ | ---- | --------------------- |
-| `Val`     | INPUT  | INT  | Current value         |
-| `inLow`   | INPUT  | INT  | Current value minimum |
-| `inHigh`  | INPUT  | INT  | Current value maximum |
-| `outLow`  | INPUT  | INT  | New value minimum     |
-| `outHigh` | OUTPUT | INT  | New value maximum     |
-
-For example you want to scale 0-100% of a PID regulator to analog output `DA2` of an L02 host PLC. 
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `xIn` | INPUT | BOOL | Enable regulator |
+| `iSV` | INPUT | INT | Set value |
+| `iPV` | INPUT | INT | Process value |
+| `iDV` | INPUT | INT | Delta (hysteresis band) |
+| `xQ` | OUTPUT | BOOL | Regulator output |
 
 **Example:**
 
 ```iecst
-D8052 := SCALE(iPIDTask, 0, 100, 0, 4000);
+VAR
+    fbHystCool : FB_HYST_COOL;
+END_VAR
+
+fbHystCool(xIn := xStart, iSV := 250, iPV := iTemperature, iDV := 5, xQ := Y0);
 ```
 
-`iPIDTask` may have value from 0 to 100, and `D8052` is a system register with control analog output `DA2` which accepts values 0-4000.
+---
 
-### DSCALE
+## Analog Input Scaling
 
-Function to scale one value to another range proportionally and returns result as `DINT`.
+### Sensor Types
 
-| Variable  | Scope  | Type | Description           |
-| --------- | ------ | ---- | --------------------- |
-| `Val`     | INPUT  | DINT | Current value         |
-| `inLow`   | INPUT  | DINT | Current value minimum |
-| `inHigh`  | INPUT  | DINT | Current value maximum |
-| `outLow`  | INPUT  | DINT | New value minimum     |
-| `outHigh` | OUTPUT | DINT | New value maximum     |
+The `STYPE_*` constants select the sensor type for `FB_SCALE_AI` and `L02_SCALE_AI`.
 
-**Example:**
-
-```iecst
-diResult := SCALE(diVacuumSensor, 0, 32_000, 0, 100_000);
-```
-
-This is vacuum sensor from 0 Pa - 100 000 Pa.
-
-### SCALE_NL
-
-Function to scale one value to another with none-linear proportions.
-
-| Variable | Scope | Type  | Description                              |
-| -------- | ----- | ----- | ---------------------------------------- |
-| `PN`     | INPUT | ANY16 | Number of points                         |
-| `DTART`  | INPUT | ANY16 | What device starts to store value        |
-| `PV`     | INPUT | ANY16 | Processed value on X scale to scale to Y |
-
-First you have to pack data. Let' say you want to create a 5 point graph started from `D100`. First device will keep number of points, and then points values.
-
-```
-D100 = Number of points
-D101 = X1
-D102 = X2
-D103 = X3
-D104 = X4
-D105 = X5
-D106 = Y1
-D107 = Y2
-D108 = Y3
-D109 = Y4
-D110 = Y5
-```
-
-Where X1-X5 and Y1-Y5 are not PLC inputs and outputs but point coordinates on X and Y scale. Let's say you have following values.
-
-```
-D100 = 5
-D101 = 0
-D102 = 10
-D103 = 50
-D104 = 70
-D105 = 100
-D106 = 0
-D107 = 20
-D108 = 40
-D109 = 90
-D110 = 100
-```
-
-This means we created a graph
-
-![](2023-12-17_15-40-23.png)
-
-Now we have 4 linear scale lines. Horizontal line is our measured value scale and vertical is what we convert it too. For instance is our `PV` will be 10 then output will be 20. If `PV` is 5 then output is 10. When you use Coolmay panel you can use XY Graph element, pass there D100 register and it will draw this graph.
-
-In the code you can use it like this.
-
-```iecst
-D200 := SACLE_NL(5, 100, Pv);
-```
-
-## SCALE_AI, L02_SCALE_AI
-
-Function to scale values from Analog inputs of PLC.
-
-### Sensor types
-
-**Scalable:**
-
-Following 3 types are scaled into measured units like Bar, Pa, cm, ... You set `Min` and `Max` for that.
+**Scalable** — these three types are scaled into engineering units using `iMin`/`iMax`:
 
 - `STYPE_0_10V`
 - `STYPE_0_20MA`
 - `STYPE_4_20MA`
 
-**None-scalable:**
-
-This types are not scalable and returned as is, so `Min` and `Max` are not applied there. But it is still good practice to get values of those AI types through specialized function block as it initialize internal system Devices to set type of AI correctly.
+**Non-scalable** — these types are returned as-is (`iMin`/`iMax` are not applied), but it is still recommended to read them through the block so the internal system devices that configure the AI type are set correctly:
 
 - `STYPE_PT100`
 - `STYPE_PT1000`
@@ -487,105 +528,135 @@ This types are not scalable and returned as is, so `Min` and `Max` are not appli
 - `STYPE_TC_S`
 - `STYPE_TC_J`
 
-### SCALE_AI
+### `FB_SCALE_AI`
 
-Function to scale AI (Analog Input) of PLC host into measured units like Bar, Pa, cm, ...
-Traditionally Coolmay PLC occupy `D8030`-`D8045`, and it is 12bit input so range is from 0~4000.
+Scales an analog input of the host PLC into engineering units. Coolmay PLCs store analog inputs in `D8030`–`D8045`; the input is 12-bit (0..4000).
 
 | Variable | Scope | Type | Description |
-| --- | --- | --- | --- |
-| `AINum` | INPUT | INT | Number of AI 0-16 |
-| `SType` | INPUT | INT | Type of the sensor. See list of types above. |
-| `Min` | INPUT | INT | Minimum of measured unit. Only for 0-10V, 0-20mA or 4-20mA. |
-| `Max` | INPUT | INT | Maximum of measured unit. Only for 0-10V, 0-20mA or 4-20mA. |
-| `Correction` | INPUT | INT | Correction of output value. |
-| `FilterTime` | INPUT | INT | Filter input by time. From 1ms to 60ms. Default 2ms. |
-| `FilterNum` | INPUT | INT | Filtering cycles, default is 100 (range 2~20000), The larger value is, the result is more stable. |
-| `ValueOut` | OUTPUT | INT | Scaled value |
-| `ErrWire` | OUTPUT | Bit | Wire out error |
-| `ErrLimit` | OUTPUT | Bit | Input values error. Minimum value is more than maximum. |
-
-This function block supports following types:
+|----------|-------|------|-------------|
+| `iAINum` | INPUT | INT | Analog input number, 0..16 |
+| `iSType` | INPUT | INT | Sensor type — see the list above |
+| `iMin` | INPUT | INT | Minimum of the measured unit (scalable types only) |
+| `iMax` | INPUT | INT | Maximum of the measured unit (scalable types only) |
+| `iFilterTime` | INPUT | INT | Filter time, 1..60 ms |
+| `iFilterNum` | INPUT | INT | Filter cycles, 1..999 (default 100) |
+| `iCorrection` | INPUT | INT | Correction added to the output |
+| `iValueOut` | OUTPUT | INT | Scaled value |
+| `xErrWire` | OUTPUT | BOOL | Wire error |
+| `xErrLimit` | OUTPUT | BOOL | Input values error (minimum greater than maximum) |
+| `xErrMinMax` | OUTPUT | BOOL | Min/Max invalid error |
 
 **Example:**
 
-Let's say you have connected 4-20mA pressure sensor at AI0 (`AD0`). That sensor measure range is 0-16 bar. You want to convert values on that analog input to bars with precision of 0.1. And another sensor is AI1 (`AD1`) of PT100 type.
-
-First declare function block.
-
 ```iecst
 VAR
-    fbScale : SCALE_AI;
-    AI0_Pressure: INT;
-    AI1_Temperature: INT;
+    fbScale : FB_SCALE_AI;
+    iPressure : INT;
+    iTemperature : INT;
 END_VAR
-```
 
-Then in a program
-
-```iecst
 fbScale(
-    AINum := 0,
-    SType := STYPE_4_20MA,
-    Min := 0,
-    Max := 160,       (* 160 is equal to 16.0 *)
-    FilterTime := 30, (* Increase filter for smoother result *)
-    FilterNum := 200,
-    ValueOut := AI0_Pressure
+    iAINum := 0,
+    iSType := STYPE_4_20MA,
+    iMin := 0,
+    iMax := 160,           (* 160 is equal to 16.0 bar *)
+    iFilterTime := 30,
+    iFilterNum := 200,
+    iValueOut := iPressure
 );
 
-IF (fbScale.ErrWire) THEN
-    (* Wire connection problem for a sensor AD0 *)
+IF fbScale.xErrWire THEN
+    (* Wire problem on analog input AD0 *)
 END_IF;
 
 fbScale(
-    AINum := 1,
-    SType := STYPE_PT100,
-    Correction := 5, (* Add +0.5 to value *)
-    ValueOut := AI1_Temperature
+    iAINum := 1,
+    iSType := STYPE_PT100,
+    iCorrection := 5,      (* Add +0.5 *)
+    iValueOut := iTemperature
 );
 ```
 
-Pay attention that we can use same function block to get values of all Analog Inputs and no need to create new instance for every AI.
+The same FB instance can read all analog inputs — a new instance is not required for each AI.
 
-### L02_SCALE_AI
+### `L02_SCALE_AI`
 
-Function to scale AI (Analog Input) of L02 series PLC modules (L02-4AD, L02-RTD, ...) into measured units like Bar, Pa, cm, ... Values from modules are stored in `R23700`~`R23749` and are 16bit. It has value 0~32000.
+Scales an analog input of an L02 series module (L02-4AD, L02-RTD, …) into engineering units. Values are stored in `R23700`–`R23749`, 16-bit, range 0..32000.
 
-| Variable     | Scope  | Type  | Description                                                 |
-| ------------ | ------ | ----- | ----------------------------------------------------------- |
-| `AINum`      | INPUT  | INT   | Number of AI 0-49                                           |
-| `SType`      | INPUT  | ANY16 | Type of the sensor. See list of types above                 |
-| `Min`        | INPUT  | ANY16 | Minimum of measured unit. Only for 0-10V, 0-20mA or 4-20mA. |
-| `Max`        | INPUT  | ANY16 | Maximum of measured unit. Only for 0-10V, 0-20mA or 4-20mA. |
-| `Correction` | INPUT  | ANY16 | Correction of output value. Will be added to output         |
-| `ValueOut`   | OUTPUT | ANY16 | Scaled value                                                |
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `iAINum` | INPUT | INT | Analog input number, 0..49 |
+| `iSType` | INPUT | INT | Sensor type — see the list above |
+| `iMin` | INPUT | INT | Minimum of the measured unit (scalable types only) |
+| `iMax` | INPUT | INT | Maximum of the measured unit (scalable types only) |
+| `iCorrection` | INPUT | INT | Correction added to the output |
+| `iValueOut` | OUTPUT | INT | Scaled value |
 
 **Example:**
 
 ```iecst
 VAR
     fbScaleL02 : L02_SCALE_AI;
-    AI0_Pressure: INT;
-    AI1_Temperature: INT;
+    iPressure : INT;
+    iTemperature : INT;
 END_VAR
-```
 
-Then in a program
-
-```iecst
 fbScaleL02(
-    AINum := 0,
-    SType := STYPE_4_20MA,
-    Min := 0,
-    Max := 160
-    ValueOut := AI0_Pressure
+    iAINum := 0,
+    iSType := STYPE_4_20MA,
+    iMin := 0,
+    iMax := 160,
+    iValueOut := iPressure
 );
 
 fbScaleL02(
-    AINum := 1,
-    SType := STYPE_PT100,
-    Correction := -2, (* Correction if -0.2 *)
-    ValueOut := AI1_Temperature
+    iAINum := 1,
+    iSType := STYPE_PT100,
+    iCorrection := -2,     (* Subtract 0.2 *)
+    iValueOut := iTemperature
+);
+```
+
+---
+
+## Valve Control
+
+### `FB_VALVE_3P`
+
+Controls a 3-position valve. It is not a pulse regulator but a regulator with constant position search: it tracks the current position via the travel time and drives the open/close outputs toward the set position `iSV` (0..1000).
+
+> **Important:** This function block requires the **TimeControl** library and its `TCO_DINT_50` ticker setup.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `xEnable` | INPUT | BOOL | Enable valve control |
+| `iSV` | INPUT | INT | Set valve position, 0..1000 (0.0..100.0 %) |
+| `iDlt` | INPUT | INT | Dead zone: no movement while the error is below this value |
+| `tTotalTime` | INPUT | TIME | Total travel time from fully closed to fully open (add ~2 %) |
+| `tLuftTime` | INPUT | TIME | Backlash (luft) compensation time on direction change |
+| `xCloseOnDisable` | INPUT | BOOL | Close the valve when control is disabled |
+| `xIsOpened` | INPUT | BOOL | Fully-open feedback |
+| `xIsClosed` | INPUT | BOOL | Fully-closed feedback |
+| `xOpen` | OUTPUT | BOOL | Open-valve command |
+| `xClose` | OUTPUT | BOOL | Close-valve command |
+
+**Example:**
+
+```iecst
+VAR
+    fbValve : FB_VALVE_3P;
+END_VAR
+
+fbValve(
+    xEnable := X0,
+    iSV := iPidTask,
+    iDlt := 50,                (* 5.0 % *)
+    tTotalTime := T#10s,
+    tLuftTime := T#500ms,
+    xCloseOnDisable := TRUE,
+    xIsOpened := X2,
+    xIsClosed := X3,
+    xOpen := Y0,
+    xClose := Y1
 );
 ```

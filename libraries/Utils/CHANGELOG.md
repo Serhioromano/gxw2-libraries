@@ -1,5 +1,12 @@
 # Changelog
 
+## V5 — 2026-08-20
+
+- **Documentation:** Rewrote `Utils.md` to follow the library documentation structure (title, abstract, prerequisites, terminology, architectural description, summary table, per-POU detail sections, conceptual sections).
+- **Added:** Documented the previously missing functions `F_LIMIT`, `F_FLT10`, `F_MBMOV` and `F_VALVE_POS`, and completed the `F_DSCALE` section (it was previously listed only by name).
+- **Documentation:** Updated every POU name and variable table to the V4 `F_`/`FB_` prefixed names and Hungarian-prefixed camelCase variables; updated all examples accordingly (positional arguments for functions, named arguments for FBs).
+- **Documentation:** Fixed the `F_SCALE_NL` graph image reference (`./img/2023-12-17_15-40-23.png`).
+
 ## V4 — 2026-08-20
 
 - **Renamed:** All POU source files now follow the standard prefix convention (`F_` for functions, `FB_` for function blocks):
