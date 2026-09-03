@@ -93,7 +93,7 @@ The application must declare the channel storage in its own global label list, s
 
 ## Test Program (PRG_MB_TEST)
 
-`PRG_MB_TEST` is a compile-and-run example that covers all three channel kinds. It enables interrupts, builds a port bit-field via `MB_PORT_SETTINGS`, and initialises the master on ports 2 and 3 (re-triggered every second by the `M8013` clock). Under the `M8002` pulse it sets the timeout globals and configures three channels:
+`PRG_MB_TEST` is a compile-and-run example that covers all three channel kinds. It enables interrupts, builds a port bit-field via `MB_PORT_SETTINGS`, and calls every Modbus POU — `MB_MASTER_INIT_PORT2`/`PORT3`, `MB_SLAVE_INIT_PORT2`/`PORT3`, and `MTB_SLAVE_PORT2`/`PORT3` — so a compile exercises every function and block (re-triggered every second by the `M8013` clock). The port-initialisation calls intentionally overlap on the same ports (master + slave + Mitsubishi protocol) and do not make logical sense together; they exist for compile/debug coverage only. Under the `M8002` pulse it sets the timeout globals and configures three channels:
 
 - **Channel 0** — register, automatic read/write (device 1, port 2, `tCycle = 20`).
 - **Channel 1** — register, read-only, on demand (device 2, port 3, `tCycle = 0`, read via `xReadOnce`).

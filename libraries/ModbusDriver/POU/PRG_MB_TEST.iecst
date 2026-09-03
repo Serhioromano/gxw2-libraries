@@ -6,6 +6,10 @@
   - Channel 1: register, read-only, on demand (device 2, port 3).
   - Channel 2: coils, read/write (device 3, port 2).
 
+  Calls every Modbus POU (master/slave init and MTB reconfiguration) so
+  the program compiles and exercises them all; the overlapping port
+  configurations are intentional and only serve compile/debug coverage.
+
   Channel storage (MB_CHANNELS, c_MB_CHANNELS_NUM) and the demo value
   labels g_iAutoReg*, g_iDemandReg, g_xCoil are declared in
   GVL_MB_TEST.csv.
@@ -17,11 +21,18 @@ EI(TRUE);
 (* Build the serial-port bit-field (9600 baud, 8 data bits, no parity, 1 stop bit). *)
 dwPortSettings := MB_PORT_SETTINGS(MB_PARITY_NONE, MB_STOPBIT_1, MB_BPS_9600);
 
-(* Initialise the Modbus master on ports 2 and 3.
+(* Call every Modbus POU so the test program compiles and exercises all of
+   them. The calls intentionally overlap on the same ports (master + slave +
+   Mitsubishi protocol) and do not make logical sense together - they are
+   here for compile/debug coverage only.
    M8013 = 1 s clock: re-triggers the initialisation every second so the
    port settings survive the startup overwrite. *)
 M0 := MB_MASTER_INIT_PORT2(M8013, dwPortSettings);
 M0 := MB_MASTER_INIT_PORT3(M8013, dwPortSettings);
+M0 := MB_SLAVE_INIT_PORT2(M8013, 1, dwPortSettings);
+M0 := MB_SLAVE_INIT_PORT3(M8013, 1, dwPortSettings);
+M0 := MTB_SLAVE_PORT2(M8013);
+M0 := MTB_SLAVE_PORT3(M8013);
 
 (* One-time channel configuration. *)
 IF M8002 THEN

@@ -1,5 +1,9 @@
 # Changelog
 
+## V10 — 2026-09-03
+
+- **Test program (`PRG_MB_TEST.iecst`):** Added active calls to every Modbus POU (`MB_SLAVE_INIT_PORT2`, `MB_SLAVE_INIT_PORT3`, `MTB_SLAVE_PORT2`, `MTB_SLAVE_PORT3`) alongside the existing master-init and scheduler calls. The calls intentionally overlap on the same ports (master + slave + Mitsubishi protocol) and do not make logical sense together — they exist purely so a compile exercises every function and block.
+
 ## V9 — 2026-08-20
 
 - **Code:** Updated Utils function calls to their prefixed names:
