@@ -1,5 +1,12 @@
 # Changelog
 
+## V11 — 2026-09-14
+
+- **Fixed (`MB_PROCESS_50.iecst`):** Re-enabling the block no longer corrupts channel configuration. The current-channel index now uses a dedicated `iChannelID` label; the old `iCount` was reused as the init-step device-zeroing loop counter and the step-1 reset changed `iCount` to `0` while `CHANNEL` still held the previously loaded channel, so the bottom `MB_CHANNELS[iCount] := CHANNEL` stored that stale snapshot into `MB_CHANNELS[0]`. Step `1` now resets `iChannelID` to `0` and reloads `CHANNEL := MB_CHANNELS[iChannelID]` before the store.
+- **CSV (`MB_PROCESS_50.csv`):** Added `iChannelID` (`INT`, current-channel index); re-scoped `iCount` to a generic loop counter.
+- **Build:** Regenerate `Modbus.sul` in GX Works 2 to propagate the change into the compiled library.
+- **Documentation:** No `Modbus.md` change required (no public API or behaviour change).
+
 ## V10 — 2026-09-03
 
 - **Test program (`PRG_MB_TEST.iecst`):** Added active calls to every Modbus POU (`MB_SLAVE_INIT_PORT2`, `MB_SLAVE_INIT_PORT3`, `MTB_SLAVE_PORT2`, `MTB_SLAVE_PORT3`) alongside the existing master-init and scheduler calls. The calls intentionally overlap on the same ports (master + slave + Mitsubishi protocol) and do not make logical sense together — they exist purely so a compile exercises every function and block.

@@ -24,13 +24,13 @@ IF MEP(mb_xEnable) THEN
 	END_FOR;
 END_IF;
 
-CHANNEL := MB_CHANNELS[iCount];
+CHANNEL := MB_CHANNELS[iChannelID];
 
 (* Delay before start communication *)
 fbTON1(IN := mb_xEnable, PT := T#3s);
 (* Whatchdog timer *)
 fbTON2(IN := imbStep = 10 OR imbStep = 30, PT := INT_TO_TIME(MB_TIMEOUT_TIME * 50));
-MOV(fbTON2.Q, iCount, mb_Timeout);
+MOV(fbTON2.Q, iChannelID, mb_Timeout);
 SET(mb_Timeout >= 0, xNextChannel);
 MOV(mb_Timeout >= 0, 20, imbStep);
 INC(mb_Timeout >= 0, CHANNEL.iTimeOut);
@@ -63,7 +63,9 @@ CASE imbStep OF
 			END_IF;
 		END_FOR;
 		lastIndex := -1;
-		iCount := 0;
+		iChannelID := 0;
+		(* Reload the channel so the bottom write-back stores the same channel *)
+		CHANNEL := MB_CHANNELS[iChannelID];
 		xAlloWrite := FALSE;
 		imbStep := 20;
 
@@ -329,22 +331,22 @@ CASE imbStep OF
 
 END_CASE;
 
-MB_CHANNELS[iCount] := CHANNEL;
+MB_CHANNELS[iChannelID] := CHANNEL;
 
 (* If switch to next channel mpve index *)
 IF xNextChannel THEN
 	xNextChannel := FALSE;
-	IF (iCount = c_MB_CHANNELS_NUM) THEN
-		iCount := 0;
+	IF (iChannelID = c_MB_CHANNELS_NUM) THEN
+		iChannelID := 0;
 	ELSE
-		IF MB_CHANNELS[iCount + 1].iNum > 0 THEN
-			iCount := iCount + 1;
+		IF MB_CHANNELS[iChannelID + 1].iNum > 0 THEN
+			iChannelID := iChannelID + 1;
 		ELSE
-			iCount := 0;
+			iChannelID := 0;
 		END_IF;
 	END_IF;
 	(* If we change channel, we went though all registers in channel *)
 	lastIndex := - 1;
 	(* If we are in channel 0 we whent through all channels at least once and can start writing *)
-	SET((iCount = 0), xAlloWrite);
+	SET((iChannelID = 0), xAlloWrite);
 END_IF;
