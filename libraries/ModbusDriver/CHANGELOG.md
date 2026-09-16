@@ -1,5 +1,19 @@
 # Changelog
 
+## V14 — 2026-09-16
+
+- **Fixed (`MB_PROCESS_50.iecst`):** The init-step device-zeroing `FMOV` calls (`FMOV(TRUE, 0, iNum, D0Z3)` / `FMOV(TRUE, 0, iNum, D0Z4)`) did not compile — GX Works 2 reports `C2021` because the `FMOV` transfer-count operand `n` must be a constant, and `iNum` is a variable. Replaced them with the previous `FOR iCount := 0 TO (iNum - 1)` loop that writes `D0Z3 := 0` / `D0Z4 := 0` directly.
+- **CSV (`MB_PROCESS_50.csv`):** Renamed the unused `iCountW` label back to `iCount` and updated its comment to `Init-step device-zeroing loop counter`.
+- **Documentation:** No `Modbus.md` change required (no public API or behaviour change).
+- **Build:** Regenerate `Modbus.sul` in GX Works 2 to propagate the change into the compiled library.
+
+## V13 — 2026-09-16
+
+- **Refactor (`MB_PROCESS_50.iecst`):** The init-step device-zeroing loop (`FOR iCount := 0 TO (iNum - 1) DO … D0Z3 := 0; D0Z4 := 0; END_FOR`) was replaced with two `FMOV` fill instructions (`FMOV(TRUE, 0, iNum, D0Z3)` and `FMOV(TRUE, 0, iNum, D0Z4)`). Behaviour is identical, but the per-channel reset no longer uses a FOR loop.
+- **CSV (`MB_PROCESS_50.csv`):** Removed the now-unused `iCount` (`INT`) local label.
+- **Documentation:** No `Modbus.md` change required (no public API or behaviour change).
+- **Build:** Regenerate `Modbus.sul` in GX Works 2 to propagate the change into the compiled library.
+
 ## V12 — 2026-09-16
 
 - **Fixed (`MB_PROCESS_50.iecst`):** The watchdog timer is now evaluated **after** the request handling (moved from before the `CASE` to after `END_CASE`). Previously, a request whose completion (`M8029`) arrived in the same scan as the timeout deadline was incorrectly marked as timed out: the watchdog ran first, forced `imbStep := 20`, advanced the channel, and incremented `iTimeOut`, discarding the success. Now the `M8029` success path runs first (resetting `iTimeOut` and syncing the snapshot), and the watchdog only fires if the channel is still in the request step afterwards.
