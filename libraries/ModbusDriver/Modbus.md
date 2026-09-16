@@ -134,6 +134,8 @@ The recommended workflow is:
 
 > If any of these variables is left at `0`, `MB_PROCESS_50` applies the default value shown above at runtime.
 
+> **Call-interval consideration.** The watchdog and the `ADPRW` completion flag (`M8029`) are only evaluated when `MB_PROCESS_50` is executed, so the *effective* resolution of `MB_TIMEOUT_TIME` is the block's actual call interval — not the 50 ms the name implies. `MB_TIMEOUT_TIME` remains specified in 50 ms units (`value × 50 ms`). Set it so the timeout lands at least one full call period past the expected request completion. Example: block called every 100 ms and a request expected to finish in 2 calls (200 ms) → use `MB_TIMEOUT_TIME := 6` (300 ms), not `4` (200 ms); otherwise the completion and the timeout are sampled on the same boundary and the request can be falsely marked as timed out.
+
 ---
 
 ## `MB_PORT_SETTINGS` (Function)
@@ -474,3 +476,5 @@ This technique is particularly useful when employing `xWriteOnChange` (rather th
 The library implements a channel-suspension policy for fault tolerance. If a channel fails to receive a response for `MB_TIMEOUT_COUNT` consecutive attempts, it is flagged as **suspended**. Once suspended, the channel is polled at a reduced rate — once every `MB_SUSPEND_RETRY` interval. As soon as a valid response is received, the suspension flag is cleared and the channel resumes its normal cycle interval as defined by `MB_CHANNELS[*].tCycle`.
 
 When an `ADPRW` request times out, `MB_PROCESS_50.mb_Timeout` reports the index of the failing channel (0-based) for one scan and is `-1` otherwise. This output can be used to react to a specific channel timing out, e.g. to latch an alarm or log the event.
+
+The watchdog timer is evaluated **after** the request handling, so a request whose completion (`M8029`) arrives in the same block call as the timeout deadline is counted as a success (the `iTimeOut` counter is reset and the snapshot is updated) rather than as a timeout. Set `MB_TIMEOUT_TIME` comfortably longer than the expected request + slave-response round-trip time and account for the block's call interval (see Timeout Tuning above); if it is too short every request is abandoned as timed out before its `M8029` arrives, the counter only ever increments, and the channel enters the suspend/retry loop without ever clearing.

@@ -1,5 +1,12 @@
 # Changelog
 
+## V12 — 2026-09-16
+
+- **Fixed (`MB_PROCESS_50.iecst`):** The watchdog timer is now evaluated **after** the request handling (moved from before the `CASE` to after `END_CASE`). Previously, a request whose completion (`M8029`) arrived in the same scan as the timeout deadline was incorrectly marked as timed out: the watchdog ran first, forced `imbStep := 20`, advanced the channel, and incremented `iTimeOut`, discarding the success. Now the `M8029` success path runs first (resetting `iTimeOut` and syncing the snapshot), and the watchdog only fires if the channel is still in the request step afterwards.
+- **Renamed (`MB_PROCESS_50.iecst` / `.csv`):** `fbTON2` → `fbWatchdogTimer` (meaningful name).
+- **Documentation (`Modbus.md`):** Added notes in the Timeout Tuning and Timeout and Suspension Mechanism sections: the watchdog is evaluated after the request handling so a same-call completion wins over a timeout; `MB_TIMEOUT_TIME` must be set longer than the round-trip time (otherwise every request is abandoned as timed out and the channel never clears its counter); and the effective resolution of `MB_TIMEOUT_TIME` is the block's actual call interval, so a caller running at e.g. 100 ms must size the timeout in whole call periods (use `6` = 300 ms for a 2-call request, not `4` = 200 ms).
+- **Build:** Regenerate `Modbus.sul` in GX Works 2 to propagate the change into the compiled library.
+
 ## V11 — 2026-09-14
 
 - **Fixed (`MB_PROCESS_50.iecst`):** Re-enabling the block no longer corrupts channel configuration. The current-channel index now uses a dedicated `iChannelID` label; the old `iCount` was reused as the init-step device-zeroing loop counter and the step-1 reset changed `iCount` to `0` while `CHANNEL` still held the previously loaded channel, so the bottom `MB_CHANNELS[iCount] := CHANNEL` stored that stale snapshot into `MB_CHANNELS[0]`. Step `1` now resets `iChannelID` to `0` and reloads `CHANNEL := MB_CHANNELS[iChannelID]` before the store.
