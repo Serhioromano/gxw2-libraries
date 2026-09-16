@@ -15,14 +15,16 @@ MOVP(mb_xEnable, 0, imbStep);
 MB_TIMEOUT_COUNT := mb_iTimeoutCount;
 MB_SUSPEND_RETRY := mb_iSuspendRetry;
 MB_TIMEOUT_TIME := mb_iTimeoutTime;
+MB_START_DELAY := mb_tStartDelay;
 MOV(MB_TIMEOUT_COUNT = 0, 2, MB_TIMEOUT_COUNT);
 MOV(MB_SUSPEND_RETRY = 0, 80, MB_SUSPEND_RETRY);
 MOV(MB_TIMEOUT_TIME = 0, 4, MB_TIMEOUT_TIME);
+if MB_START_DELAY = T#0s THEN MB_START_DELAY := T#3s; END_IF;
 
 CHANNEL := MB_CHANNELS[iChannelID];
 
 (* Delay before start communication *)
-fbStartDelay(IN := mb_xEnable, PT := T#3s);
+fbStartDelay(IN := mb_xEnable, PT := MB_START_DELAY);
 
 CASE imbStep OF
 	0: (* BOOT DELAY ON START *)

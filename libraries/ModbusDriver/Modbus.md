@@ -241,6 +241,7 @@ This function block orchestrates all read and write operations across the config
 | `mb_iTimeoutCount` | INPUT | `INT` | Consecutive timeouts before a channel is suspended. Default (when `0`): `2`. |
 | `mb_iSuspendRetry` | INPUT | `INT` | Suspended-channel retry interval, in 50 ms units. Default (when `0`): `80` (4 s). |
 | `mb_iTimeoutTime`  | INPUT | `INT` | Timeout duration, in 50 ms units. Default (when `0`): `4` (200 ms). |
+| `mb_tStartDelay`  | INPUT | `TIME` | Startup delay. |
 | `mb_iTimeout`  | OUTPUT | `INT`  | Channel number (index) of the channel that timed out. Held for one scan; `-1` when no channel has timed out.                                                                                                                                                                        |
 
 ### Timeout Tuning
