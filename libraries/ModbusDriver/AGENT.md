@@ -8,7 +8,7 @@ ModbusDriver is a Structured Text library for Mitsubishi FX series PLCs (GX Work
 
 ```
 POU/
-├── GVL_MB.csv                     — Global constants (access modes, parity, stop bits, baud rates, ports) and timeout globals
+├── GVL_MB.csv                     — Global constants (access modes, clear modes, parity, stop bits, baud rates, ports)
 ├── GVL_MB_TEST.csv                — Test-project globals: channel storage (MB_CHANNELS + c_MB_CHANNELS_NUM) and demo value labels (g_iAutoReg*, g_iDemandReg*, g_xCoil*)
 ├── ST_MB_REG_50.csv               — MB_REG_50 struct definition (per-channel configuration)
 ├── MB_PORT_SETTINGS.iecst / .csv     — Function: build the D8120/D8400 port bit-field from parity/stop/baud inputs
@@ -45,6 +45,9 @@ POU/
 | `MB_READ_WRITE` | 0 | Access mode — read and write |
 | `MB_READ` | 1 | Access mode — read only |
 | `MB_WRITE` | 2 | Access mode — write only |
+| `MB_CLEAR_NONE` | 0 | Startup clear mode — clear nothing (default) |
+| `MB_CLEAR_ALL` | 1 | Startup clear mode — clear values and change-tracking buffer |
+| `MB_CLEAR_BUFFER` | 2 | Startup clear mode — clear change-tracking buffer only |
 | `MB_DL_7` | 0 | 7 data bits |
 | `MB_DL_8` | 1 | 8 data bits |
 | `MB_PARITY_NONE` | 0 | No parity |
@@ -58,13 +61,7 @@ POU/
 | `MB_PORT_CAN` | 2 | CAN port |
 | `MB_PORT_TCP` | 3 | Ethernet TCP port |
 
-### Variables
-
-| Variable | Type | Purpose |
-|---|---|---|
-| `MB_TIMEOUT_COUNT` | INT | Consecutive timeouts before a channel is suspended |
-| `MB_SUSPEND_RETRY` | INT | Suspended-channel retry interval (50 ms units) |
-| `MB_TIMEOUT_TIME` | INT | Timeout duration (50 ms units) |
+Timeout tuning (`mb_iTimeoutCount`, `mb_iSuspendRetry`, `mb_iTimeoutTime`) and startup clearing (`mb_iClearOnStart`) are no longer global variables — they are inputs of `MB_PROCESS_50`. The block keeps local copies named `MB_TIMEOUT_COUNT`, `MB_SUSPEND_RETRY`, and `MB_TIMEOUT_TIME` that receive the input value (or the default when the input is `0`).
 
 ## User Requirements (declared by the application)
 
@@ -84,8 +81,9 @@ The application must declare the channel storage in its own global label list, s
 - Requires the **TimeControl** library: `MB_PROCESS_50` uses `TCO_DINT_50` and `TCO_50_DIFF` for 50 ms scheduling. `TCO_TICKER_50` must run in an interrupt task.
 - Requires the **Utils** library: the init/settings functions use `F_DSETB` / `F_DSRB`, and `MB_PROCESS_50` uses `F_MBMOV` / `F_ISBON`.
 - `MB_PROCESS_50` must be called every scan (or at least faster than the shortest `tCycle`). A startup `fbTON1` delay of 3 s gates the first request.
-- `mb_Timeout` is an `INT` output that reports the 0-based index (`iChannelID`) of the channel that timed out, held for one scan; it is `-1` when no channel has timed out. The watchdog block (`fbWatchdogTimer`, evaluated **after** the request handling) sets it via `MOV(fbWatchdogTimer.Q, iChannelID, mb_Timeout)`, the per-scan default `mb_Timeout := -1` is set at the top of the POU, and the guard conditions use `mb_Timeout >= 0` / `mb_Timeout = -1` (not `> 0` / `= 0`).
+- `mb_iTimeout` is an `INT` output that reports the 0-based index (`iChannelID`) of the channel that timed out, held for one scan; it is `-1` when no channel has timed out. The watchdog block (`fbWatchdogTimer`, evaluated **after** the request handling) sets it via `MOV(fbWatchdogTimer.Q, iChannelID, mb_iTimeout)`, the per-scan default `mb_iTimeout := -1` is set at the top of the POU, and the guard conditions use `mb_iTimeout >= 0` / `mb_iTimeout = -1` (not `> 0` / `= 0`).
 - `iTimeOut` (per-channel, library-managed) is the consecutive-timeout counter. It is incremented in the watchdog block (`fbWatchdogTimer`, evaluated **after** the `CASE` so a request completed in the same scan wins over a timeout) when a request times out and reset to `0` (`CHANNEL.iTimeOut := 0;`) on every successful `ADPRW` completion (both register and coil paths).
+- Timeout tuning is supplied as `MB_PROCESS_50` inputs (`mb_iTimeoutCount`, `mb_iSuspendRetry`, `mb_iTimeoutTime`). The local `VAR` copies `MB_TIMEOUT_COUNT`, `MB_SUSPEND_RETRY`, `MB_TIMEOUT_TIME` hold the effective values — the input is copied in and, when `0`, the default (`2` / `80` / `4`) is applied. Startup clearing is controlled by `mb_iClearOnStart` with the `MB_CLEAR_ALL` / `MB_CLEAR_BUFFER` / `MB_CLEAR_NONE` constants.
 - `iChannelID` is the dedicated current-channel index. Step `1` resets `iChannelID` to `0` and reloads `CHANNEL := MB_CHANNELS[iChannelID]` so the bottom `MB_CHANNELS[iChannelID] := CHANNEL` store always targets the same channel it loaded. This fixes a bug where re-enabling the block mid-run copied a stale channel snapshot into `MB_CHANNELS[0]`. The init-step device zeroing uses a `FOR iCount := 0 TO (iNum - 1)` loop that writes `D0Z3 := 0` / `D0Z4 := 0`. Do not replace it with `FMOV` — in GX Works 2 the `FMOV` transfer-count operand `n` must be a constant, and `iNum` is a channel variable (the compiler rejects it with `C2021`).
 - Channel storage: each channel reserves **2 × `iNum`** devices in the `D` (register) or `M` (coil) area — half for values, half for change tracking. Allocate `iDDevNum` so consecutive channels do not overlap (see `Modbus.md`).
 - `MB_CHANNELS` and `c_MB_CHANNELS_NUM` are user requirements — declared by the application, not the library. Configure the channel fields once at startup (typically under `M8002`).
@@ -94,7 +92,7 @@ The application must declare the channel storage in its own global label list, s
 
 ## Test Program (PRG_MB_TEST)
 
-`PRG_MB_TEST` is a compile-and-run example that covers all three channel kinds. It enables interrupts, builds a port bit-field via `MB_PORT_SETTINGS`, and calls every Modbus POU — `MB_MASTER_INIT_PORT2`/`PORT3`, `MB_SLAVE_INIT_PORT2`/`PORT3`, and `MTB_SLAVE_PORT2`/`PORT3` — so a compile exercises every function and block (re-triggered every second by the `M8013` clock). The port-initialisation calls intentionally overlap on the same ports (master + slave + Mitsubishi protocol) and do not make logical sense together; they exist for compile/debug coverage only. Under the `M8002` pulse it sets the timeout globals and configures three channels:
+`PRG_MB_TEST` is a compile-and-run example that covers all three channel kinds. It enables interrupts, builds a port bit-field via `MB_PORT_SETTINGS`, and calls every Modbus POU — `MB_MASTER_INIT_PORT2`/`PORT3`, `MB_SLAVE_INIT_PORT2`/`PORT3`, and `MTB_SLAVE_PORT2`/`PORT3` — so a compile exercises every function and block (re-triggered every second by the `M8013` clock). The port-initialisation calls intentionally overlap on the same ports (master + slave + Mitsubishi protocol) and do not make logical sense together; they exist for compile/debug coverage only. Under the `M8002` pulse it configures three channels (timeout and clear-on-start tuning are passed to `fbMbProcess`):
 
 - **Channel 0** — register, automatic read/write (device 1, port 2, `tCycle = 20`).
 - **Channel 1** — register, read-only, on demand (device 2, port 3, `tCycle = 0`, read via `xReadOnce`).

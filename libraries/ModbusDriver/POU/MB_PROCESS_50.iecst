@@ -4,13 +4,17 @@
   in its global label list; the library references them directly.
  *)
 (* Default output: no channel timed out this scan *)
-mb_Timeout := -1;
+mb_iTimeout := -1;
 
 (* If we disable block, go to to step 0 *)
 MOVP(NOT mb_xEnable, 0, imbStep);
 MOVP(mb_xEnable, 0, imbStep);
 
-(* Set defaults *)
+(* Copy timeout tuning from the input variables and apply the defaults
+   when the corresponding input is left at 0. *)
+MB_TIMEOUT_COUNT := mb_iTimeoutCount;
+MB_SUSPEND_RETRY := mb_iSuspendRetry;
+MB_TIMEOUT_TIME := mb_iTimeoutTime;
 MOV(MB_TIMEOUT_COUNT = 0, 2, MB_TIMEOUT_COUNT);
 MOV(MB_SUSPEND_RETRY = 0, 80, MB_SUSPEND_RETRY);
 MOV(MB_TIMEOUT_TIME = 0, 4, MB_TIMEOUT_TIME);
@@ -37,13 +41,21 @@ CASE imbStep OF
 				OR MB_CHANNELS[iIndex].iRF = H3 OR MB_CHANNELS[iIndex].iRF = H4
 			);
 
-			(* Reset devices to 0 *)
-			FOR iCount := 0 TO (MB_CHANNELS[iIndex].iNum - 1) DO
-				Z3 := MB_CHANNELS[iIndex].iDDevNum + iCount;
-				Z4 := Z3 + MB_CHANNELS[iIndex].iNum;
-				D0Z3 := 0;
-				D0Z4 := 0;
-			END_FOR;
+			(* Clear value and/or change-tracking buffers on start,
+			   according to mb_iClearOnStart:
+			   MB_CLEAR_ALL    = clear values and change-tracking buffer
+			   MB_CLEAR_BUFFER = clear change-tracking buffer only
+			   MB_CLEAR_NONE   = clear nothing (default) *)
+			IF mb_iClearOnStart <> MB_CLEAR_NONE THEN
+				FOR iCount := 0 TO (MB_CHANNELS[iIndex].iNum - 1) DO
+					Z3 := MB_CHANNELS[iIndex].iDDevNum + iCount;
+					Z4 := Z3 + MB_CHANNELS[iIndex].iNum;
+					IF mb_iClearOnStart = MB_CLEAR_ALL THEN
+						D0Z3 := 0;
+					END_IF;
+					D0Z4 := 0;
+				END_FOR;
+			END_IF;
 		END_FOR;
 
 		lastIndex := -1;
@@ -198,7 +210,7 @@ CASE imbStep OF
 
 		(* Work with registeres *)
 		ADPRW(
-			xProcess AND mb_Timeout = -1,
+			xProcess AND mb_iTimeout = -1,
 			CHANNEL.iDev, (* Device adress *)
 			setFunc, (* Function to read *)
 			setReg, (* Register address *)
@@ -256,7 +268,7 @@ CASE imbStep OF
 
 		(* Work with coils *)
 		ADPRW(
-			xProcess AND mb_Timeout = -1,
+			xProcess AND mb_iTimeout = -1,
 			CHANNEL.iDev,
 			setFunc,
 			setReg,
@@ -319,10 +331,10 @@ END_CASE;
 (* Watchdog timer - evaluated AFTER the request handling so a completed
    request (M8029) wins over a timeout in the same scan. *)
 fbWatchdogTimer(IN := imbStep = 10 OR imbStep = 30, PT := INT_TO_TIME(MB_TIMEOUT_TIME * 50));
-MOV(fbWatchdogTimer.Q, iChannelID, mb_Timeout);
-SET(mb_Timeout >= 0, xNextChannel);
-MOV(mb_Timeout >= 0, 20, imbStep);
-INC(mb_Timeout >= 0, CHANNEL.iTimeOut);
+MOV(fbWatchdogTimer.Q, iChannelID, mb_iTimeout);
+SET(mb_iTimeout >= 0, xNextChannel);
+MOV(mb_iTimeout >= 0, 20, imbStep);
+INC(mb_iTimeout >= 0, CHANNEL.iTimeOut);
 IF imbStep = 20 THEN fbWatchdogTimer(IN := FALSE); END_IF;
 
 MB_CHANNELS[iChannelID] := CHANNEL;

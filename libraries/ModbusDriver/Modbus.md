@@ -92,6 +92,14 @@ The recommended workflow is:
 | `MB_READ` | `1` | Read only. |
 | `MB_WRITE` | `2` | Write only. |
 
+### Clear-on-Start Modes
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `MB_CLEAR_NONE` | `0` | Clear nothing (default). |
+| `MB_CLEAR_ALL` | `1` | Clear both the value buffer and the change-tracking buffer. |
+| `MB_CLEAR_BUFFER` | `2` | Clear the change-tracking buffer only. |
+
 ### Serial Port Settings
 
 | Constant | Value | Description |
@@ -123,18 +131,6 @@ The recommended workflow is:
 | `MB_PORT_3` | `1` | RS485 port 3 — DB9 connector (A1, B1) |
 | `MB_PORT_CAN` | `2` | CAN port (H, L) |
 | `MB_PORT_TCP` | `3` | Ethernet TCP port |
-
-### Timeout Tuning
-
-| Variable | Type | Description |
-|----------|------|-------------|
-| `MB_TIMEOUT_COUNT` | `INT` | Consecutive timeouts before a channel is suspended. Default: `2`. |
-| `MB_SUSPEND_RETRY` | `INT` | Suspended-channel retry interval, in 50 ms units. Default: `80` (4 s). |
-| `MB_TIMEOUT_TIME` | `INT` | Timeout duration, in 50 ms units. Default: `4` (200 ms). |
-
-> If any of these variables is left at `0`, `MB_PROCESS_50` applies the default value shown above at runtime.
-
-> **Call-interval consideration.** The watchdog and the `ADPRW` completion flag (`M8029`) are only evaluated when `MB_PROCESS_50` is executed, so the *effective* resolution of `MB_TIMEOUT_TIME` is the block's actual call interval — not the 50 ms the name implies. `MB_TIMEOUT_TIME` remains specified in 50 ms units (`value × 50 ms`). Set it so the timeout lands at least one full call period past the expected request completion. Example: block called every 100 ms and a request expected to finish in 2 calls (200 ms) → use `MB_TIMEOUT_TIME := 6` (300 ms), not `4` (200 ms); otherwise the completion and the timeout are sampled on the same boundary and the request can be falsely marked as timed out.
 
 ---
 
@@ -241,7 +237,17 @@ This function block orchestrates all read and write operations across the config
 | ------------- | ------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `mb_xEnable`  | INPUT  | `BOOL` | Enables channel processing. When `FALSE`, the scheduler resets to its boot state.                                                                                                                                                                                             |
 | `mb_iBuffer`  | INPUT  | `INT`  | Base `D` device number of the scratch buffer used during `ADPRW` transfers. The scratch buffer holds up to `iNum` words for register channels, or `⌈iNum / 16⌉` words for coil channels (one bit per coil). It must not overlap any channel's value or change-tracking buffer. |
-| `mb_Timeout`  | OUTPUT | `INT`  | Channel number (index) of the channel that timed out. Held for one scan; `-1` when no channel has timed out.                                                                                                                                                                        |
+| `mb_iClearOnStart` | INPUT | `INT` | Startup buffer-clearing mode: `MB_CLEAR_ALL`, `MB_CLEAR_BUFFER`, or `MB_CLEAR_NONE` (default). |
+| `mb_iTimeoutCount` | INPUT | `INT` | Consecutive timeouts before a channel is suspended. Default (when `0`): `2`. |
+| `mb_iSuspendRetry` | INPUT | `INT` | Suspended-channel retry interval, in 50 ms units. Default (when `0`): `80` (4 s). |
+| `mb_iTimeoutTime`  | INPUT | `INT` | Timeout duration, in 50 ms units. Default (when `0`): `4` (200 ms). |
+| `mb_iTimeout`  | OUTPUT | `INT`  | Channel number (index) of the channel that timed out. Held for one scan; `-1` when no channel has timed out.                                                                                                                                                                        |
+
+### Timeout Tuning
+
+> **Call-interval consideration.** The watchdog and the `ADPRW` completion flag (`M8029`) are only evaluated when `MB_PROCESS_50` is executed, so the *effective* resolution of `mb_iTimeoutTime` is the block's actual call interval — not the 50 ms the name implies. `mb_iTimeoutTime` remains specified in 50 ms units (`value × 50 ms`). Set it so the timeout lands at least one full call period past the expected request completion. Example: block called every 100 ms and a request expected to finish in 2 calls (200 ms) → use `mb_iTimeoutTime := 6` (300 ms), not `4` (200 ms); otherwise the completion and the timeout are sampled on the same boundary and the request can be falsely marked as timed out.
+
+> **Clear-on-start.** `mb_iClearOnStart` controls what the scheduler clears when it initialises the channel array (boot/enable). `MB_CLEAR_ALL` clears both the value buffer and the change-tracking buffer (the previous behaviour); `MB_CLEAR_BUFFER` clears only the change-tracking buffer, preserving the current value buffer; `MB_CLEAR_NONE` clears neither. Use `MB_CLEAR_NONE` or `MB_CLEAR_BUFFER` when values must be preserved across the startup reset.
 
 ### The `MB_REG_50` Structure
 
@@ -364,13 +370,7 @@ END_VAR
 ```iecst
 IF M8002 THEN
 
-    (* Number of consecutive timeouts before a channel is suspended. Default: 2 *)
-    MB_TIMEOUT_COUNT := 2;
-    (* Suspended-channel retry interval, in 50 ms units. Default: 80 (4 seconds) *)
-    MB_SUSPEND_RETRY := 80;
-    (* Timeout duration, in 50 ms units. Default: 4 (200 ms) *)
-    MB_TIMEOUT_TIME := 4;
-
+    (* Timeout and clear-on-start tuning are supplied to fbMbProcess below. *)
     PortSettings := MB_PORT_SETTINGS(MB_PARITY_NONE, MB_STOPBIT_1, MB_BPS_9600);
 
     (* Automatic read/write channel on port 2 *)
@@ -413,7 +413,11 @@ END_IF;
 M0 := MB_MASTER_INIT_PORT2(M8013, PortSettings);
 M0 := MB_MASTER_INIT_PORT3(M8013, PortSettings);
 
-fbMbProcess(mb_xEnable := TRUE, mb_iBuffer := 100);
+fbMbProcess(mb_xEnable := TRUE, mb_iBuffer := 100,
+    mb_iClearOnStart := MB_CLEAR_ALL,
+    mb_iTimeoutCount := 2,
+    mb_iSuspendRetry := 80,
+    mb_iTimeoutTime := 4);
 
 (* Manually read channel 2 once *)
 IF M1 THEN
@@ -473,8 +477,8 @@ This technique is particularly useful when employing `xWriteOnChange` (rather th
 
 ## Timeout and Suspension Mechanism
 
-The library implements a channel-suspension policy for fault tolerance. If a channel fails to receive a response for `MB_TIMEOUT_COUNT` consecutive attempts, it is flagged as **suspended**. Once suspended, the channel is polled at a reduced rate — once every `MB_SUSPEND_RETRY` interval. As soon as a valid response is received, the suspension flag is cleared and the channel resumes its normal cycle interval as defined by `MB_CHANNELS[*].tCycle`.
+The library implements a channel-suspension policy for fault tolerance. If a channel fails to receive a response for `mb_iTimeoutCount` consecutive attempts, it is flagged as **suspended**. Once suspended, the channel is polled at a reduced rate — once every `mb_iSuspendRetry` interval. As soon as a valid response is received, the suspension flag is cleared and the channel resumes its normal cycle interval as defined by `MB_CHANNELS[*].tCycle`.
 
-When an `ADPRW` request times out, `MB_PROCESS_50.mb_Timeout` reports the index of the failing channel (0-based) for one scan and is `-1` otherwise. This output can be used to react to a specific channel timing out, e.g. to latch an alarm or log the event.
+When an `ADPRW` request times out, `MB_PROCESS_50.mb_iTimeout` reports the index of the failing channel (0-based) for one scan and is `-1` otherwise. This output can be used to react to a specific channel timing out, e.g. to latch an alarm or log the event.
 
-The watchdog timer is evaluated **after** the request handling, so a request whose completion (`M8029`) arrives in the same block call as the timeout deadline is counted as a success (the `iTimeOut` counter is reset and the snapshot is updated) rather than as a timeout. Set `MB_TIMEOUT_TIME` comfortably longer than the expected request + slave-response round-trip time and account for the block's call interval (see Timeout Tuning above); if it is too short every request is abandoned as timed out before its `M8029` arrives, the counter only ever increments, and the channel enters the suspend/retry loop without ever clearing.
+The watchdog timer is evaluated **after** the request handling, so a request whose completion (`M8029`) arrives in the same block call as the timeout deadline is counted as a success (the `iTimeOut` counter is reset and the snapshot is updated) rather than as a timeout. Set `mb_iTimeoutTime` comfortably longer than the expected request + slave-response round-trip time and account for the block's call interval (see Timeout Tuning above); if it is too short every request is abandoned as timed out before its `M8029` arrives, the counter only ever increments, and the channel enters the suspend/retry loop without ever clearing.

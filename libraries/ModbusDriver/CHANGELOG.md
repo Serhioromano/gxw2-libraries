@@ -1,5 +1,16 @@
 # Changelog
 
+## V15 — 2026-09-16
+
+- **Added (`MB_PROCESS_50.iecst` / `.csv`):** New `VAR_INPUT` `mb_iClearOnStart` controls the startup clearing of channel buffers. It accepts the global constants `MB_CLEAR_ALL` (clear value and change-tracking buffers), `MB_CLEAR_BUFFER` (clear change-tracking buffer only), and `MB_CLEAR_NONE` (default, clear nothing). The previous unconditional clearing of both buffers on init is now gated by this input.
+- **Added (`GVL_MB.csv`):** Global constants `MB_CLEAR_NONE` (`0`), `MB_CLEAR_ALL` (`1`), `MB_CLEAR_BUFFER` (`2`).
+- **Changed (`MB_PROCESS_50.iecst` / `.csv`):** Timeout tuning is now supplied as `MB_PROCESS_50` inputs — `mb_iTimeoutCount`, `mb_iSuspendRetry`, `mb_iTimeoutTime` — instead of the global variables `MB_TIMEOUT_COUNT`, `MB_SUSPEND_RETRY`, `MB_TIMEOUT_TIME`. The old names are kept as local `VAR` copies that receive the input value, with the previous defaults (`2` / `80` / `4`) applied when an input is `0`.
+- **Renamed (`MB_PROCESS_50.iecst` / `.csv`):** Output `mb_Timeout` → `mb_iTimeout` so the scheduler's I/O variables all use the `mb_` prefix (`mb_xEnable`, `mb_iBuffer`, `mb_iClearOnStart`, `mb_iTimeoutCount`, `mb_iSuspendRetry`, `mb_iTimeoutTime`, `mb_iTimeout`).
+- **Removed (`GVL_MB.csv`):** Global variables `MB_TIMEOUT_COUNT`, `MB_SUSPEND_RETRY`, `MB_TIMEOUT_TIME`.
+- **Changed (`PRG_MB_TEST.iecst`):** The test program now passes `mb_iClearOnStart := MB_CLEAR_ALL`, `mb_iTimeoutCount := 2`, `mb_iSuspendRetry := 80`, `mb_iTimeoutTime := 4` to `fbMbProcess` instead of writing the timeout globals under `M8002`.
+- **Documentation:** Updated `Modbus.md` (clear-on-start modes, timeout inputs, complete example, timeout/suspension references) and `AGENT.md`.
+- **Build:** Regenerate `Modbus.sul` and the `compiler.gxw` test project in GX Works 2, and regenerate `Modbus.pdf` from `Modbus.md`, to propagate the change into the compiled library, documentation PDF, and test project.
+
 ## V14 — 2026-09-16
 
 - **Fixed (`MB_PROCESS_50.iecst`):** The init-step device-zeroing `FMOV` calls (`FMOV(TRUE, 0, iNum, D0Z3)` / `FMOV(TRUE, 0, iNum, D0Z4)`) did not compile — GX Works 2 reports `C2021` because the `FMOV` transfer-count operand `n` must be a constant, and `iNum` is a variable. Replaced them with the previous `FOR iCount := 0 TO (iNum - 1)` loop that writes `D0Z3 := 0` / `D0Z4 := 0` directly.

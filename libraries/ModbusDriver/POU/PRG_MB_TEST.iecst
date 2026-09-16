@@ -36,10 +36,7 @@ M0 := MTB_SLAVE_PORT3(M8013);
 
 (* One-time channel configuration. *)
 IF M8002 THEN
-    (* Timeout tuning. *)
-    MB_TIMEOUT_COUNT := 2;
-    MB_SUSPEND_RETRY := 80;
-    MB_TIMEOUT_TIME := 4;
+    (* Timeout and clear-on-start tuning are passed to fbMbProcess below. *)
 
     (* Channel 0 - register, automatic read/write (device 1, port 2). *)
     MB_CHANNELS[0].xEnabled := TRUE;
@@ -81,7 +78,11 @@ IF M8002 THEN
 END_IF;
 
 (* Channel scheduler - call every scan. *)
-fbMbProcess(mb_xEnable := TRUE, mb_iBuffer := 200);
+fbMbProcess(mb_xEnable := TRUE, mb_iBuffer := 200,
+    mb_iClearOnStart := MB_CLEAR_ALL,
+    mb_iTimeoutCount := 2,
+    mb_iSuspendRetry := 80,
+    mb_iTimeoutTime := 4);
 
 (* On-demand read of channel 1 (register, read-only). *)
 IF M1 THEN
