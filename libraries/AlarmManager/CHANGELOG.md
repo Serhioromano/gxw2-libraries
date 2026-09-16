@@ -1,5 +1,10 @@
 # Changelog
 
+## V215 — 2026-09-16
+
+- **Fix (auto-reset):** `FB_AM_RESET` now converts the `AutoReset` seconds into 50 ms ticks with the TimeControl function `F_SEC_TO_TCO_50(AutoReset)` instead of `INT_TO_DWORD(AutoReset * 20)`. The old expression multiplied in 16-bit `INT` and overflowed for `AutoReset > 1638` s (e.g. `6000 * 20 = 120000` wrapped to a negative value), which made the elapsed-time comparison pass immediately and auto-reset latched auto-reset alarms at once. The new conversion widens to `DINT` before multiplying, so `AutoReset` values up to the `INT` input range are converted correctly.
+- **Code:** Split `FB_AM_RESET` into two loops — the manual reset loop (`fbTPReset.Q`) and the auto-reset loop (`AutoReset > 0`) — with the auto-reset loop gated on `ALARM.autoReset`.
+
 ## V214 — 2026-08-20
 
 - **Code:** `FB_AM_PACK_ALARMS.iecst` and `FB_AM_PACK_EVENTS.iecst` now call the Utils function `F_SRB` (was `SRB`) to set/reset each alarm/event bit while assembling the packed `D`/`R` register word.
