@@ -80,6 +80,7 @@ END_IF;
 (* Channel scheduler - call every scan. *)
 fbMbProcess(mb_xEnable := TRUE, mb_iBuffer := 200,
     mb_iClearOnStart := MB_CLEAR_ALL,
+    mb_tStartDelay := T#5s,    
     mb_iTimeoutCount := 2,
     mb_iSuspendRetry := 80,
     mb_iTimeoutTime := 4);
