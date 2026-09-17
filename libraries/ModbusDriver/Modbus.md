@@ -248,7 +248,33 @@ This function block orchestrates all read and write operations across the config
 
 > **Call-interval consideration.** The watchdog and the `ADPRW` completion flag (`M8029`) are only evaluated when `MB_PROCESS_50` is executed, so the *effective* resolution of `mb_iTimeoutTime` is the block's actual call interval — not the 50 ms the name implies. `mb_iTimeoutTime` remains specified in 50 ms units (`value × 50 ms`). Set it so the timeout lands at least one full call period past the expected request completion. Example: block called every 100 ms and a request expected to finish in 2 calls (200 ms) → use `mb_iTimeoutTime := 6` (300 ms), not `4` (200 ms); otherwise the completion and the timeout are sampled on the same boundary and the request can be falsely marked as timed out.
 
-> **Clear-on-start.** `mb_iClearOnStart` controls what the scheduler clears when it initialises the channel array (boot/enable). `MB_CLEAR_ALL` clears both the value buffer and the change-tracking buffer (the previous behaviour); `MB_CLEAR_BUFFER` clears only the change-tracking buffer, preserving the current value buffer; `MB_CLEAR_NONE` clears neither. Use `MB_CLEAR_NONE` or `MB_CLEAR_BUFFER` when values must be preserved across the startup reset.
+### Clear-on-Start
+
+`mb_iClearOnStart` controls what `MB_PROCESS_50` does with each channel's two buffers when it initialises the channel array. This happens once, after the startup delay and before the first channel is processed. Every channel owns a **value buffer** (the actual register/coil values) and a **change-tracking buffer** (an internal copy used to detect local changes). The scheduler treats a value as "changed" — and, for a write-capable channel, writes it to the slave — whenever the value buffer differs from the change-tracking buffer.
+
+| Constant | Value | What is cleared |
+|----------|-------|-----------------|
+| `MB_CLEAR_NONE` | `0` | Nothing (default). |
+| `MB_CLEAR_ALL` | `1` | Value buffer and change-tracking buffer. |
+| `MB_CLEAR_BUFFER` | `2` | Change-tracking buffer only. |
+
+#### What happens in each case
+
+- **`MB_CLEAR_ALL` — read first.** Both buffers are zeroed, so they are equal and no local change is detected. Write-capable channels therefore issue **no write** on startup; read-capable channels simply perform their normal **read first** when the cycle elapses, filling the value buffer from the slave. The slave is treated as the source of truth.
+
+- **`MB_CLEAR_BUFFER` — write current values.** The value buffer is preserved while the change-tracking buffer is zeroed. Every retained **non-zero** value therefore differs from its cleared change-tracking entry and is seen as "changed", so write-capable channels (`MB_READ_WRITE` or `MB_WRITE`) attempt to **write their current values to the slave** at the next write opportunity. A retained value of `0` matches the cleared entry and is **not** written.
+
+- **`MB_CLEAR_NONE` — no side effects.** Nothing is cleared. Both buffers keep their contents, so no artificial "changed" state is introduced and no extra read or write is forced at startup. Retained values are written only if they genuinely differ from the retained change-tracking buffer.
+
+#### Use cases
+
+- **`MB_CLEAR_NONE`** — the PLC's `D`/`M` values are latched across restarts and already consistent with the change-tracking buffer. The driver is left untouched and performs only its normal `tCycle` reads/writes, with no startup write.
+
+- **`MB_CLEAR_ALL`** — cold start or commissioning, or any situation where the slave is the source of truth and the driver should pull current slave values first. Because both buffers are cleared, it produces no spurious startup writes.
+
+- **`MB_CLEAR_BUFFER`** — the PLC's retained value buffer is the source of truth and the slave may have lost its state (for example, the slave was power-cycled independently or replaced). On startup the driver re-pushes the retained values to the slave, re-synchronising the slave to the PLC.
+
+> **Note:** The write-on-startup effect of `MB_CLEAR_BUFFER` applies to **non-zero** retained values only. Because the change-tracking buffer is zeroed, a retained `0` is indistinguishable from "unchanged" and is not written. If the retained value buffer is entirely zero, `MB_CLEAR_BUFFER` behaves like `MB_CLEAR_NONE` and no write occurs.
 
 ### The `MB_REG_50` Structure
 
