@@ -35,6 +35,8 @@ CASE imbStep OF
 			MB_CHANNELS[iIndex].tStart := TCO_DINT_50;
 			MB_CHANNELS[iIndex].iTimeOut := 0;
 			MB_CHANNELS[iIndex].xDone := FALSE;
+			MB_CHANNELS[iIndex].xReadOnceM := FALSE;
+			MB_CHANNELS[iIndex].xWriteOnceM := FALSE;
 			MOV(MB_CHANNELS[iIndex].iRF = 0, H3, MB_CHANNELS[iIndex].iRF);
 			MOV(MB_CHANNELS[iIndex].iWF = 0, H6, MB_CHANNELS[iIndex].iWF);
 			MOV((MB_CHANNELS[iIndex].iNum = 0), 1, MB_CHANNELS[iIndex].iNum);
@@ -145,8 +147,8 @@ CASE imbStep OF
 					END_IF;
 				END_FOR;
 			END_IF;
+			CHANNEL.xWriteOnceM := CHANNEL.xWriteOnce;
 		END_IF;
-		CHANNEL.xWriteOnceM := CHANNEL.xWriteOnce;
 
 		(* If we do not have any WRITE task lets read *)
 		IF imbStep = 20
@@ -179,8 +181,8 @@ CASE imbStep OF
 			setReg := CHANNEL.iReg;
 
 			imbStep := 10;
+			CHANNEL.xReadOnceM := CHANNEL.xReadOnce;
 		END_IF;
-		CHANNEL.xReadOnceM := CHANNEL.xReadOnce;
 
 		(* Reset first ADPRW call *)
 		RST(imbStep = 10, xProcess);
@@ -251,6 +253,8 @@ CASE imbStep OF
 			(* Save values *)
 			RST(TRUE, M8029);
 			CHANNEL.xDone := TRUE;
+			CHANNEL.xReadOnceM := FALSE;
+			CHANNEL.xWriteOnceM := FALSE;
 			imbStep := 20;
 
 			(* The only condition we do not go to the next channel *)
