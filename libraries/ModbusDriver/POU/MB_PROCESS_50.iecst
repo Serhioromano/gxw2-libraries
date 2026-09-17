@@ -102,21 +102,18 @@ CASE imbStep OF
 			)
 		THEN
 			IF CHANNEL.xWriteOnce AND NOT CHANNEL.xWriteOnceM THEN
+				setReg  := CHANNEL.iReg;
+				setZ    := CHANNEL.iDDevNum;
+				setNum  := CHANNEL.iNum;
 				setFunc := CHANNEL.iWF;
-				IF CHANNEL.isRegister AND CHANNEL.iNum > 1 THEN
-					setFunc := H10;
-				END_IF;
-				IF NOT CHANNEL.isRegister AND CHANNEL.iNum > 1 THEN
-					setFunc := HF;
-				END_IF;
-
-				setReg := CHANNEL.iReg;
-				setZ := CHANNEL.iDDevNum;
-				setNum := CHANNEL.iNum;
+				
+				MOV(CHANNEL.isRegister AND CHANNEL.iNum > 1, H10, setFunc);
+				MOV(NOT CHANNEL.isRegister AND CHANNEL.iNum > 1, HF, setFunc);
 				MOV(setFunc <> H10 AND setFunc <> HF, 0, setNum);
+				
 				imbStep := 10;
 			ELSE
-				FOR iIndex := 0 TO (CHANNEL.iNum -1) DO
+				FOR iIndex := 0 TO (CHANNEL.iNum - 1) DO
 					Z5 := CHANNEL.iDDevNum + iIndex;
 					Z6 := Z5 + CHANNEL.iNum;
 
@@ -242,7 +239,7 @@ CASE imbStep OF
 				allowed to resync it. *)
 
 				xHadChanged := FALSE;
-				FOR iIndex := 0 TO (setNum -1) DO
+				FOR iIndex := 0 TO (setNum - 1) DO
 					Z3 := CHANNEL.iDDevNum + iIndex;
 					Z4 := CHANNEL.iDDevNum + CHANNEL.iNum + iIndex;
 					SET(CHANNEL.iWR <> MB_READ 
@@ -310,7 +307,7 @@ CASE imbStep OF
 				allowed to resync it. *)
 
 				xHadChanged := FALSE;
-				FOR iIndex := 0 TO (setNum -1) DO
+				FOR iIndex := 0 TO (setNum - 1) DO
 					Z3 := CHANNEL.iDDevNum + iIndex ;
 					Z4 := CHANNEL.iDDevNum + CHANNEL.iNum + iIndex;
 					SET(CHANNEL.iWR <> MB_READ 
@@ -322,7 +319,7 @@ CASE imbStep OF
 				END_FOR;
 
 				IF NOT xHadChanged THEN
-					FOR iIndex := 0 TO CHANNEL.iNum -1 DO
+					FOR iIndex := 0 TO (CHANNEL.iNum - 1) DO
 						Z5 := setZ + iIndex;
 						Z6 := Z5 + CHANNEL.iNum;
 
@@ -338,6 +335,8 @@ CASE imbStep OF
 			(* Save values *)
 			RST(TRUE, M8029);
 			CHANNEL.xDone := TRUE;
+			CHANNEL.xReadOnceM := FALSE;
+			CHANNEL.xWriteOnceM := FALSE;
 			imbStep := 20;
 
 			(* The only condition we do not go to the next channel *)
