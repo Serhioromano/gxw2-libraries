@@ -1,5 +1,11 @@
 # Changelog
 
+## V16 — 2026-09-17
+
+- **Fixed (`MB_PROCESS_50.iecst`):** A stale difference between a channel's value buffer and its change-tracking buffer no longer blocks reads on manual-only channels. The read-result protection (which discards a completed read when the value buffer changed while the request was in flight) is now applied only when the scheduler will actually write that change — `xWriteOnChange = TRUE`, `tCycle > 0`, or a pending `xWriteOnce`. For a manual-only channel (`tCycle = 0`, `xWriteOnChange = FALSE`) with no `xWriteOnce` pending, a completed read now resynchronises the value and change-tracking buffers, so a value register cleared or edited by hand is not held in a permanently stale state.
+- **Documentation:** Updated `Modbus.md` (change-tracking buffer semantics and read resynchronisation for manual channels) and `AGENT.md`.
+- **Build:** Regenerate `Modbus.sul` and `Modbus.pdf` in GX Works 2 to propagate the change into the compiled library and documentation PDF.
+
 ## V15 — 2026-09-16
 
 - **Added (`MB_PROCESS_50.iecst` / `.csv`):** New `VAR_INPUT` `mb_iClearOnStart` controls the startup clearing of channel buffers. It accepts the global constants `MB_CLEAR_ALL` (clear value and change-tracking buffers), `MB_CLEAR_BUFFER` (clear change-tracking buffer only), and `MB_CLEAR_NONE` (default, clear nothing). The previous unconditional clearing of both buffers on init is now gated by this input.

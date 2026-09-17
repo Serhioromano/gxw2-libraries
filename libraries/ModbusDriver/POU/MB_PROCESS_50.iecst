@@ -19,7 +19,7 @@ MB_START_DELAY := mb_tStartDelay;
 MOV(MB_TIMEOUT_COUNT = 0, 2, MB_TIMEOUT_COUNT);
 MOV(MB_SUSPEND_RETRY = 0, 80, MB_SUSPEND_RETRY);
 MOV(MB_TIMEOUT_TIME = 0, 4, MB_TIMEOUT_TIME);
-if MB_START_DELAY = T#0s THEN MB_START_DELAY := T#3s; END_IF;
+IF MB_START_DELAY = T#0s THEN MB_START_DELAY := T#3s; END_IF;
 
 CHANNEL := MB_CHANNELS[iChannelID];
 
@@ -234,14 +234,23 @@ CASE imbStep OF
 			BMOV((setFunc = H6 OR setFunc = H10), D0Z5, setNum, D0Z6);
 			(* If we read *)
 			IF setFunc = H3 OR setFunc = H4 THEN
-				(* Check if the values had changed while we were deading them
-				and if YES then we will not update those. *)
+				(* Check if the values changed while we were reading them. Only
+				suppress the read result when the scheduler will actually write the
+				change: write-on-change, tCycle-driven writes, or a pending
+				xWriteOnce. Otherwise the mismatch is a stale change-tracking
+				buffer (e.g. the value was cleared by hand) and the read is
+				allowed to resync it. *)
 
 				xHadChanged := FALSE;
 				FOR iIndex := 0 TO (setNum -1) DO
 					Z3 := CHANNEL.iDDevNum + iIndex;
 					Z4 := CHANNEL.iDDevNum + CHANNEL.iNum + iIndex;
-					SET(CHANNEL.iWR <> MB_READ AND D0Z3 <> D0Z4, xHadChanged);
+					SET(CHANNEL.iWR <> MB_READ 
+						AND D0Z3 <> D0Z4 
+						AND (CHANNEL.xWriteOnChange = TRUE 
+							OR CHANNEL.tCycle > 0 
+							OR CHANNEL.xWriteOnce = TRUE), 
+						xHadChanged);
 				END_FOR;
 
 				Z5 := setZ;
@@ -293,14 +302,23 @@ CASE imbStep OF
 
 			(* If we read *)
 			IF setFunc = H1 OR setFunc = H2 THEN
-				(* Check if the values had changed while we were deading them
-				and if YES then we will not update those. *)
+				(* Check if the values changed while we were reading them. Only
+				suppress the read result when the scheduler will actually write the
+				change: write-on-change, tCycle-driven writes, or a pending
+				xWriteOnce. Otherwise the mismatch is a stale change-tracking
+				buffer (e.g. the value was cleared by hand) and the read is
+				allowed to resync it. *)
 
 				xHadChanged := FALSE;
 				FOR iIndex := 0 TO (setNum -1) DO
 					Z3 := CHANNEL.iDDevNum + iIndex ;
 					Z4 := CHANNEL.iDDevNum + CHANNEL.iNum + iIndex;
-					SET(CHANNEL.iWR <> MB_READ AND M0Z3 <> M0Z4, xHadChanged);
+					SET(CHANNEL.iWR <> MB_READ 
+						AND M0Z3 <> M0Z4 
+						AND (CHANNEL.xWriteOnChange = TRUE 
+							OR CHANNEL.tCycle > 0 
+							OR CHANNEL.xWriteOnce = TRUE), 
+						xHadChanged);
 				END_FOR;
 
 				IF NOT xHadChanged THEN

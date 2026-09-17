@@ -235,3 +235,4 @@ Follow the same pattern: description → variable tables → examples → notes.
 4. Update the Abstract if the library's behaviour has materially changed.
 5. Add or modify FB/Function detail sections as needed.
 6. Preserve existing examples unless the API has changed — then update them.
+7. Do not add notes what was changed. there is a changelog for that. The documentation should reflect the current state of the library, not its history.
