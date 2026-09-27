@@ -38,6 +38,15 @@ libraries/
     └── POU/
 ```
 
+## Skill Package
+
+`skills/gxw2-libraries/` is a short routing skill: `SKILL.md` points agents using
+`gxw2-st` to the relevant library manual. Its `references/` folder contains copies
+of all four user manuals and their images, generated from `libraries/` by
+`scripts/sync-skill.mjs` (`npm run sync-skill`). `package.json` declares `pi.skills`
+so the manuals are installed with the skill. Do not edit generated references by hand.
+Compiled `.sul` files remain in `libraries/` for manual installation by the user.
+
 | File / Folder | Purpose |
 |---|---|
 | `POU/` | Source code — `.iecst` (Structured Text) and `.csv` (GX Works 2 Label Editor) files |
@@ -46,6 +55,8 @@ libraries/
 | `<LibraryName>.sul` | Compiled GX Works 2 library file |
 | `AGENT.md` | Notes for AI agent who edit library files |
 | `CHANGELOG.md` | Version history |
+| `skills/gxw2-libraries/` | Routing skill with bundled user documentation |
+| `scripts/sync-skill.mjs` | Regenerates the skill payload from `libraries/` |
 
 ## Conventions
 
@@ -66,3 +77,6 @@ libraries/
 ## Key Skills
 
 - `gxw2-st` — GX Works 2 ST code generation, FX instruction catalog, CSV variable formats, common rules.
+- `lib-doc` — library documentation structure (`libraries/<Name>/<Name>.md`).
+- `gxw2-libraries` — routes GX Works 2 tasks to bundled AlarmManager,
+  ModbusDriver, TimeControl and Utils manuals when used alongside `gxw2-st`.

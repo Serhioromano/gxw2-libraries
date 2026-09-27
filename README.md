@@ -13,7 +13,7 @@
 | **AlarmManager** | Управление авариями и событиями: регистрация, фильтрация по процессу и важности, защёлкивание, задержка срабатывания, управление зуммером, упаковка состояний для HMI | `libraries/AlarmManager/AlarmManager.md` | TimeControl |
 | **Utils** | Полезные функции и функциональные блоки общего назначения | `libraries/Utils/Utils.md` | — |
 | **TimeControl** | Таймеры с шагом 50 мс / 10 мс — замена функции `TIME()` из CoDeSys | `libraries/TimeControl/TimeControl.md` | Utils |
-| **ModbusDriver** | Драйвер Modbus RTU (master / slave) для портов 2 и 3 | `libraries/ModbusDriver/Modbus.EN.md` и `Modbus.RU.md` | Utils, TimeControl (ticker 50 мс) |
+| **ModbusDriver** | Драйвер Modbus RTU (master / slave) для портов 2 и 3 | `libraries/ModbusDriver/Modbus.md` | Utils, TimeControl (ticker 50 мс) |
 | **Easing** | Функции плавного изменения величины: ease-in, ease-out, ease-in-out | `libraries/Easing.md` | — |
 | **PumpControl** | Управление группами насосов (каскад до 9 насосов, поддержание давления, ротация по наработке) | `libraries/PumpControl.md` | Utils |
 
@@ -60,11 +60,14 @@ gxw2-libraries/
 │   │   ├── AGENT.md          #   │   заметки для AI-агента (внутренняя документация)
 │   │   ├── POU/              #   │   исходные тексты: .iecst (код) + .csv (метки)
 │   │   └── img/              #   │   изображения для документации
-│   ├── ModbusDriver/         #   ├── Modbus.EN.md/.pdf, Modbus.RU.md/.pdf, Modbus.sul
+│   ├── ModbusDriver/         #   ├── Modbus.md/.pdf, Modbus.sul
 │   ├── TimeControl/          #   ├── TimeControl.md/.pdf, TimeControl.sul
 │   ├── Utils/                #   ├── Utils.md/.pdf, Utils.sul
 │   ├── Easing.md/.pdf        #   ├── Easing (документация и .sul лежат в корне libraries/)
 │   └── PumpControl.md/.pdf   #   └── PumpControl
+├── skills/gxw2-libraries/    # Навык для AI-агента: SKILL.md + документация и изображения
+├── scripts/sync-skill.mjs    # Генератор содержимого навыка из libraries/
+├── package.json              # Манифест пакета/навыка (pi.skills)
 └── .pi/, .vscode/            # Служебные файлы для разработки (см. ниже)
 ```
 
@@ -80,7 +83,7 @@ gxw2-libraries/
 | `POU/` | Исходные тексты: `.iecst` (код на Structured Text) + `.csv` (метки для импорта в GX Works 2). |
 | `img/` | Изображения, на которые ссылается документация. |
 
-> **Важно:** исходные тексты (`POU/`) сейчас есть только у **AlarmManager** — первой библиотеки, переведённой на новые принципы разработки. Остальные библиотеки поставляются как готовый `.sul` + документация.
+> **Важно:** исходные тексты (`POU/`) переведены на новые принципы у четырёх библиотек: AlarmManager, ModbusDriver, TimeControl и Utils. Easing и PumpControl поставляются как готовый `.sul` + документация.
 
 ---
 
@@ -91,6 +94,35 @@ gxw2-libraries/
 3. Библиотека появится в списке библиотек проекта; её функциональные блоки и функции станут доступны в окне *Library*.
 4. Если библиотека имеет зависимости (см. таблицу выше), установите их в том же порядке (например, для ModbusDriver сначала Utils и TimeControl).
 5. Для TimeControl дополнительно запустите программу тикера `PRG_TCO_TICKER_50` (или `PRG_TCO_TICKER_10`) — см. `TimeControl.md`.
+
+---
+
+## Навык для AI-агента `gxw2-libraries`
+
+Навык `skills/gxw2-libraries/` помогает агенту, работающему с `gxw2-st`, выбрать нужное руководство: AlarmManager — аварии и события, ModbusDriver — Modbus RTU, TimeControl — время и тикеры, Utils — вспомогательные функции. Вместе с навыком устанавливаются руководства по всем четырём библиотекам и изображения из них. Файлы `.sul` в навык не входят: пользователь устанавливает библиотеки в GX Works 2 самостоятельно.
+
+| Путь в навыке | Содержимое |
+| ------------- | ---------- |
+| `SKILL.md` | Краткие условия выбора руководства |
+| `references/<Имя>.md` | Копии пользовательской документации четырёх библиотек (для ModbusDriver источник — `libraries/ModbusDriver/Modbus.md`) |
+| `references/img/<Имя>/` | Изображения, на которые ссылается документация |
+
+Установка навыка:
+
+```bash
+pi install git:github.com/Serhioromano/gxw2-libraries
+```
+
+Если пакет опубликован в npm — `pi install npm:gxw2-libraries`.
+
+Содержимое `references/` генерируется из `libraries/` скриптом `scripts/sync-skill.mjs`. После правок документации или её изображений обновите навык:
+
+```bash
+npm run sync-skill    # пересобрать копии в навыке
+npm run check-skill   # проверить, что копии актуальны
+```
+
+Править файлы внутри `skills/gxw2-libraries/references/` вручную нельзя — изменения затрутся при следующей синхронизации.
 
 ---
 

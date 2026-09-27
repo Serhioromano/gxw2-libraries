@@ -1,0 +1,48 @@
+{
+  "name": "gxw2-libraries",
+  "version": "1.0.0",
+  "description": "Pi skill routing GX Works 2 Structured Text tasks to the bundled Coolmay AlarmManager, ModbusDriver, TimeControl and Utils manuals.",
+  "keywords": [
+    "pi-package",
+    "pi-skill",
+    "agent-skills",
+    "PLC",
+    "GX Works 2",
+    "Mitsubishi",
+    "Coolmay",
+    "FX3G",
+    "Structured Text",
+    "ST",
+    "Modbus RTU",
+    "AlarmManager",
+    "TimeControl",
+    "Utils"
+  ],
+  "homepage": "https://github.com/Serhioromano/gxw2-libraries#readme",
+  "bugs": {
+    "url": "https://github.com/Serhioromano/gxw2-libraries/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Serhioromano/gxw2-libraries.git"
+  },
+  "license": "MIT",
+  "author": "Sergey Romanov",
+  "main": "skills/gxw2-libraries/SKILL.md",
+  "files": [
+    "README.md",
+    "scripts",
+    "skills"
+  ],
+  "pi": {
+    "skills": [
+      "./skills"
+    ]
+  },
+  "scripts": {
+    "sync-skill": "node scripts/sync-skill.mjs",
+    "check-skill": "node scripts/sync-skill.mjs --check",
+    "prepare": "node scripts/sync-skill.mjs --quiet",
+    "prepack": "node scripts/sync-skill.mjs --quiet"
+  }
+}
