@@ -4,9 +4,9 @@
 
 ## Abstract
 
-The Modbus RTU Driver enables a Coolmay FX3G PLC to operate as a Modbus RTU master or slave on its two auxiliary RS485 ports (port 2 and port 3). Communication channels are configured through an application-declared array `MB_CHANNELS` of type `MB_REG_50`; a single function block, `MB_PROCESS_50`, cycles through that array and issues the underlying `ADPRW` read/write requests on a **50 ms** tick.
+The Modbus RTU Driver enables a Coolmay FX3G PLC to operate as a Modbus RTU master or slave on its two auxiliary RS485 ports (port 2 and port 3). On L02-series PLCs the same channel model also drives the built-in Ethernet port as a Modbus TCP master (client) — a channel whose `iPort` is `MB_PORT_TCP` is handled with the same scheduling logic as an RS485 channel. Communication channels are configured through an application-declared array `MB_CHANNELS` of type `MB_REG_50`; a single function block, `MB_PROCESS_50`, cycles through that array and performs the channel transfers on a **50 ms** tick.
 
-Version V7 changes the channel-storage model: the `MB_CHANNELS` array and the `c_MB_CHANNELS_NUM` capacity constant are no longer declared by the library. The application declares them in its own global label list, sized to the number of channels it actually uses, and `MB_PROCESS_50` cycles through exactly that many channels. This keeps the automatically-assigned device usage proportional to the number of channels actually configured.
+The `MB_CHANNELS` array and the `c_MB_CHANNELS_NUM` capacity constant are declared by the application in its own global label list, sized to the number of channels it actually uses; `MB_PROCESS_50` cycles through exactly that many channels. This keeps the automatically-assigned device usage proportional to the number of channels actually configured.
 
 ---
 
@@ -17,7 +17,7 @@ Version V7 changes the channel-storage model: the `MB_CHANNELS` array and the `c
    - `Utils.sul`
    - `TimeControl.sul`
 
-2. The TimeControl library's `TCO_TICKER_50` ticker must be running. It advances at **50 ms** intervals and drives the internal scheduling of `MB_PROCESS_50`.
+2. The TimeControl library's `TCO_TICKER_50` ticker must be running. It advances at **50 ms** intervals and drives the scheduling of `MB_PROCESS_50`.
 
 3. The application must declare the Modbus channel storage in its own global label list before using `MB_PROCESS_50`:
 
@@ -26,7 +26,9 @@ Version V7 changes the channel-storage model: the `MB_CHANNELS` array and the `c
 
    > The literal array bound must match `c_MB_CHANNELS_NUM`. For three channels (indices `0`–`2`), declare `c_MB_CHANNELS_NUM := 2` and `MB_CHANNELS : ARRAY [0..2] OF MB_REG_50`.
 
-4. This library is compatible with **GX Works 2 v1.631H** and later. Updates are available from the `coolmay/soft` directory.
+4. Modbus TCP channels additionally require an L02-series PLC with the built-in Ethernet interface and the `Utils` library's `L02_SET_IP` function. See § Modbus TCP (Ethernet).
+
+5. This library is compatible with **GX Works 2 v1.631H** and later. Updates are available from the `coolmay/soft` directory.
 
 ---
 
@@ -35,7 +37,7 @@ Version V7 changes the channel-storage model: the `MB_CHANNELS` array and the `c
 - **Channel** — A single configured Modbus read/write relationship, described by one element of `MB_CHANNELS`.
 - **Register channel** — A channel that transfers 16-bit register data (function codes `H3`, `H4`, `H6`, `H10`). Its value buffer lives in the `D` device area.
 - **Coil channel** — A channel that transfers discrete bit data (function codes `H1`, `H2`, `H5`, `HF`). Its value buffer lives in the `M` device area.
-- **Scratch buffer** — A `D`-area workspace used by `MB_PROCESS_50` during `ADPRW` transfers, starting at the `mb_iBuffer` base device.
+- **Scratch buffer** — A `D`-area workspace used by `MB_PROCESS_50` during a transfer, starting at the `mb_iBuffer` base device.
 
 **Type names:** this document uses the IEC type names written in the GX Works 2 label CSV files. The Label Editor displays them as follows:
 
@@ -50,7 +52,7 @@ Version V7 changes the channel-storage model: the `MB_CHANNELS` array and the `c
 
 ## Architectural Description
 
-This library enables a Coolmay FX3G PLC to operate as a **Modbus Slave** or a **Modbus Master** (on the secondary and tertiary RS485 ports — ports 2 and 3, respectively) for reading from and writing to Modbus RTU devices. It provides a low-overhead interface for configuring and managing Modbus communication channels.
+This library enables a Coolmay FX3G PLC to operate as a **Modbus Slave** or a **Modbus Master** on the secondary and tertiary RS485 ports (ports 2 and 3, respectively), and — on L02-series PLCs — as a **Modbus TCP Master** over the built-in Ethernet port. It provides a low-overhead interface for configuring and managing Modbus communication channels.
 
 The Modbus channels are described in a user-declared global array `MB_CHANNELS` of type `MB_REG_50`. The library does not fix the channel count: the application declares the array and the `c_MB_CHANNELS_NUM` upper bound in its global label list, and `MB_PROCESS_50` cycles through exactly that many channels.
 
@@ -58,8 +60,8 @@ Coolmay PLC/HMI integrated units are equipped with two RS485 ports: port 2 is ex
 
 The recommended workflow is:
 
-1. At startup (under the `M8002` initialisation pulse), configure the timeout globals and the `MB_CHANNELS` array.
-2. Initialise the required ports with `MB_PORT_SETTINGS` and the relevant `MB_*_INIT_*` function. Re-trigger the initialisation periodically after startup (see the timing note in § Modbus Master).
+1. At startup (under the `M8002` initialisation pulse), configure the `MB_CHANNELS` array.
+2. Initialise each RS485 port that is used with `MB_PORT_SETTINGS` and the relevant `MB_*_INIT_*` function. Re-trigger the initialisation periodically after startup (see the timing note in § Modbus Master). For a `MB_PORT_TCP` channel the Ethernet port is configured instead, as described in § Modbus TCP (Ethernet).
 3. Call `fbMbProcess` every scan (or at least faster than the shortest `tCycle`).
 
 > **Calling convention:** the port-initialisation and settings POUs are *functions* that return their result through the function name. In GX Works 2 a function call used as a statement requires a left-hand side, so callers assign the result to a dummy bit, e.g. `M0 := MB_MASTER_INIT_PORT2(TRUE, PortSettings);`. The result value is not used elsewhere.
@@ -77,7 +79,7 @@ The recommended workflow is:
 | `MB_SLAVE_INIT_PORT3` | Function | Initialise the Modbus slave on port 3. |
 | `MTB_SLAVE_PORT2` | Function | Reconfigure port 2 for the Mitsubishi protocol. |
 | `MTB_SLAVE_PORT3` | Function | Reconfigure port 3 for the Mitsubishi protocol. |
-| `MB_PROCESS_50` | Function Block | Cycle through channels and issue `ADPRW` read/write requests. |
+| `MB_PROCESS_50` | Function Block | Cycle through the channels and perform their read/write transfers. |
 | `MB_REG_50` | Structure | Per-channel configuration (declared by the application as `MB_CHANNELS`). |
 
 ---
@@ -130,13 +132,13 @@ The recommended workflow is:
 | `MB_PORT_2` | `0` | RS485 port 2 — terminal connector (A, B) |
 | `MB_PORT_3` | `1` | RS485 port 3 — DB9 connector (A1, B1) |
 | `MB_PORT_CAN` | `2` | CAN port (H, L) |
-| `MB_PORT_TCP` | `3` | Ethernet TCP port |
+| `MB_PORT_TCP` | `3` | Ethernet TCP port (L02-series PLCs only; see § Modbus TCP (Ethernet)) |
 
 ---
 
 ## `MB_PORT_SETTINGS` (Function)
 
-Returns a correctly formatted bit-field value for initialising a port as either Master or Slave. The returned value is a `DWORD` bit-field for the port configuration register.
+Returns the port-configuration value passed to `MB_MASTER_INIT_*` / `MB_SLAVE_INIT_*` when initialising a port as either Master or Slave.
 
 | Variable   | Scope  | Type    | Description                                                                                                                          |
 | ---------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -170,7 +172,7 @@ These functions initialise the Modbus slave on port 2 or port 3 of the PLC, resp
 | `iAddress`     | INPUT  | `INT`   | Modbus network address assigned to this PLC.                                  |
 | `PortSettings` | INPUT  | `DWORD` | Return value of the `MB_PORT_SETTINGS` function.                              |
 
-> **Important — initialisation timing:** the same caveat as for the master functions applies (see § Modbus Master). The function acts only on a rising edge of `xInit`, and triggering it solely from `M8002` may not reliably retain the port settings. Re-trigger it after startup, e.g. with the one-second clock `M8013`.
+> **Important — initialisation timing:** the function acts only on a rising edge of `xInit` (see § Modbus Master). Triggering it solely from the `M8002` first-scan pulse may not retain the port settings — feed the one-second clock `M8013` into `xInit` to re-apply them every second.
 
 #### Example
 
@@ -196,14 +198,13 @@ These functions initialise the Modbus Master on port 2 (terminal connector) or p
 | `xInit`        | INPUT  | `BOOL`  | Initialisation command. The master is (re-)initialised on every rising edge.   |
 | `PortSettings` | INPUT  | `DWORD` | Return value of the `MB_PORT_SETTINGS` function.                                |
 
-> **Important — initialisation timing:** The function acts only on a rising edge of `xInit`; re-initialising on every scan is **not required** and is **not performed**. Passing a constant `TRUE` fires the initialisation once, on the first scan. Triggering it solely from the `M8002` first-scan pulse is **not reliable**: the port configuration may not be retained because the settings can be overwritten later during startup. It is therefore recommended to re-trigger initialisation after startup. A common practice is to feed the one-second clock pulse `M8013` into `xInit`, so the port settings are re-written every second.
+> **Important — initialisation timing:** the function acts only on a rising edge of `xInit`. Triggering it solely from the `M8002` first-scan pulse may not retain the port settings; feed the one-second clock `M8013` into `xInit` to re-apply them every second.
 
 #### Example
 
 ```iecst
 PortSettings := MB_PORT_SETTINGS(MB_PARITY_NONE, MB_STOPBIT_1, MB_BPS_9600);
-(* M8013 = 1 s clock: re-writes the port settings every second so they
-   survive the startup overwrite. A constant TRUE fires only once. *)
+(* M8013 = 1 s clock: re-applies the port settings every second. *)
 M0 := MB_MASTER_INIT_PORT2(M8013, PortSettings);
 ```
 
@@ -231,12 +232,12 @@ M0 := MTB_SLAVE_PORT2(TRUE);
 
 This function block orchestrates all read and write operations across the configured channels. It must be called every scan (or at least faster than the shortest channel `tCycle`).
 
-> **Prerequisite:** The TimeControl library must be installed and `TCO_TICKER_50` must be running. This ticker advances at 50 ms intervals and drives the internal scheduling of channel operations.
+> **Prerequisite:** The TimeControl library must be installed and `TCO_TICKER_50` must be running. This ticker advances at 50 ms intervals and drives the scheduling of channel operations.
 
 | Variable      | Scope  | Type   | Description                                                                                                                                                                                                                                                                   |
 | ------------- | ------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mb_xEnable`  | INPUT  | `BOOL` | Enables channel processing. When `FALSE`, the scheduler resets to its boot state.                                                                                                                                                                                             |
-| `mb_iBuffer`  | INPUT  | `INT`  | Base `D` device number of the scratch buffer used during `ADPRW` transfers. The scratch buffer holds up to `iNum` words for register channels, or `⌈iNum / 16⌉` words for coil channels (one bit per coil). It must not overlap any channel's value or change-tracking buffer. |
+| `mb_xEnable`  | INPUT  | `BOOL` | Enables channel processing. When `FALSE`, processing is suspended; re-enabling restarts the channels from the beginning.                                                                                                                                                     |
+| `mb_iBuffer`  | INPUT  | `INT`  | Base `D` device number of the scratch buffer used during a transfer. The scratch buffer holds up to `iNum` words for register channels, or `⌈iNum / 16⌉` words for coil channels (one bit per coil). It must not overlap any channel's value or change-tracking buffer. |
 | `mb_iClearOnStart` | INPUT | `INT` | Startup buffer-clearing mode: `MB_CLEAR_ALL`, `MB_CLEAR_BUFFER`, or `MB_CLEAR_NONE` (default). |
 | `mb_iTimeoutCount` | INPUT | `INT` | Consecutive timeouts before a channel is suspended. Default (when `0`): `2`. |
 | `mb_iSuspendRetry` | INPUT | `INT` | Suspended-channel retry interval, in 50 ms units. Default (when `0`): `80` (4 s). |
@@ -246,7 +247,7 @@ This function block orchestrates all read and write operations across the config
 
 ### Timeout Tuning
 
-> **Call-interval consideration.** The watchdog and the `ADPRW` completion flag (`M8029`) are only evaluated when `MB_PROCESS_50` is executed, so the *effective* resolution of `mb_iTimeoutTime` is the block's actual call interval — not the 50 ms the name implies. `mb_iTimeoutTime` remains specified in 50 ms units (`value × 50 ms`). Set it so the timeout lands at least one full call period past the expected request completion. Example: block called every 100 ms and a request expected to finish in 2 calls (200 ms) → use `mb_iTimeoutTime := 6` (300 ms), not `4` (200 ms); otherwise the completion and the timeout are sampled on the same boundary and the request can be falsely marked as timed out.
+> **Call-interval consideration.** The timeout is only evaluated when `MB_PROCESS_50` is executed, so the *effective* resolution of `mb_iTimeoutTime` is the block's actual call interval — not the 50 ms the name implies. `mb_iTimeoutTime` remains specified in 50 ms units (`value × 50 ms`). Set it so the timeout lands at least one full call period past the expected request completion. Example: block called every 100 ms and a request expected to finish in 2 calls (200 ms) → use `mb_iTimeoutTime := 6` (300 ms), not `4` (200 ms); otherwise the completion and the timeout are sampled on the same boundary and the request can be falsely marked as timed out.
 
 ### Clear-on-Start
 
@@ -280,9 +281,7 @@ This function block orchestrates all read and write operations across the config
 
 The application declares a global array `MB_CHANNELS` of type `MB_REG_50`, together with a global constant `c_MB_CHANNELS_NUM` that holds the array's upper bound (last valid index). The library references both labels directly — it does not declare them. `MB_PROCESS_50` cycles through channels `0` to `c_MB_CHANNELS_NUM`, so the number of channels is fully under application control (e.g. `c_MB_CHANNELS_NUM := 2` for 3 channels, `:= 29` for 30 channels). Each channel may read or write up to **125** registers. The array must be configured once, typically on PLC startup under the `M8002` initialisation pulse flag.
 
-The structure contains user-configurable fields (set by the application) and library-managed fields (maintained internally; do not modify).
-
-#### User-Configurable Fields
+The structure contains the following user-configurable fields.
 
 | Variable         | Type    | Description                                                                                                                                                                                                                             |
 | ---------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -292,7 +291,7 @@ The structure contains user-configurable fields (set by the application) and lib
 | `iReg`           | `WORD`  | Starting Modbus register/coil address. Declared `WORD` (unsigned) so addresses above 32,000 can be specified.                                                                                                                            |
 | `iRF`            | `WORD`  | Modbus read function code (`H1`–`H4`). Default (when `0`): `H3`.                                                                                                                                                                        |
 | `iWF`            | `WORD`  | Modbus write function code (`H5`, `H6`, `HF`, `H10`). Default (when `0`): `H6`.                                                                                                                                                          |
-| `iDev`           | `WORD`  | Modbus slave device address.                                                                                                                                                                                                             |
+| `iDev`           | `WORD`  | Modbus slave device address. On a `MB_PORT_TCP` channel it is the remote server index (`1`–`4`); see § Modbus TCP (Ethernet).                                                                                                            |
 | `tCycle`         | `INT`   | Cycle interval for automatic reads/writes, in units of 50 ms. E.g. `20` = 1 second. Set to `0` for manual-only operation via `xReadOnce` / `xWriteOnce`.                                                                                 |
 | `iWR`            | `INT`   | Read/write mode: `MB_READ_WRITE`, `MB_READ`, or `MB_WRITE`. Writes (including `xWriteOnce` / `xWriteOnChange`) require `MB_READ_WRITE` or `MB_WRITE`.                                                                                     |
 | `iPort`          | `INT`   | Communication port identifier: `MB_PORT_2`, `MB_PORT_3`, `MB_PORT_CAN`, or `MB_PORT_TCP`. See § Ports.                                                                                                                                   |
@@ -300,16 +299,6 @@ The structure contains user-configurable fields (set by the application) and lib
 | `xReadOnce`      | `BOOL`  | On a rising edge (`FALSE` → `TRUE`), triggers a single read of this channel. For manual-only reads, set `tCycle` to `0`.                                                                                                                  |
 | `xWriteOnce`     | `BOOL`  | On a rising edge (`FALSE` → `TRUE`), triggers a single write of this channel. For manual-only writes, set `tCycle` to `0`.                                                                                                                |
 | `xDone`          | `BOOL`  | Read-only completion pulse. Set `TRUE` on completion of one read/write cycle; cleared at the start of the next cycle. Primarily useful for channels operating in manual mode (`tCycle = 0`).                                              |
-
-#### Library-Managed Fields (Read-Only)
-
-| Variable       | Type    | Description                                                              |
-| -------------- | ------- | ------------------------------------------------------------------------ |
-| `tStart`       | `DWORD` | Timestamp of the last completed operation (50 ms ticker).                |
-| `iTimeOut`     | `INT`   | Consecutive-timeout counter used for channel suspension. Reset to `0` on every successful poll.                 |
-| `isRegister`   | `BOOL`  | `TRUE` = register channel, `FALSE` = coil channel. Derived from `iRF`/`iWF`. |
-| `xReadOnceM`   | `BOOL`  | Rising-edge memory for `xReadOnce`.                                       |
-| `xWriteOnceM`  | `BOOL`  | Rising-edge memory for `xWriteOnce`.                                      |
 
 ### Supported Read/Write Functions
 
@@ -435,8 +424,7 @@ IF M8002 THEN
 END_IF;
 
 (* Multi-master mode is available on both ports for L02-series PLCs.
-   M8013 = 1 s clock re-writes the port settings every second so they
-   survive the startup overwrite. *)
+   M8013 = 1 s clock re-applies the port settings every second. *)
 M0 := MB_MASTER_INIT_PORT2(M8013, PortSettings);
 M0 := MB_MASTER_INIT_PORT3(M8013, PortSettings);
 
@@ -482,7 +470,7 @@ As described in § `iDDevNum`, each channel reserves twice the number of devices
 - `D10`–`D12` hold the actual register values.
 - `D13`–`D15` serve as the change-tracking buffer.
 
-Upon a successful write, the library updates the change-tracking buffer to match the newly written values. Therefore, equality between the value registers and their corresponding change-tracking registers confirms that the write has completed.
+The change-tracking registers are updated together with the write. Equality between the value registers and their corresponding change-tracking registers therefore confirms that the write has completed.
 
 ```iecst
 (* Alternative write-confirmation technique *)
@@ -502,10 +490,136 @@ This technique is particularly useful when employing `xWriteOnChange` (rather th
 
 ---
 
+## Modbus TCP (Ethernet)
+
+On L02-series PLCs a channel can use the built-in Ethernet port instead of an RS485 port. A TCP channel is configured and used like any other channel — the same `MB_REG_50` fields, the same `tCycle`, `xReadOnce` / `xWriteOnce`, change-tracking, timeout and suspension rules — with two differences:
+
+1. `iPort` must be set to `MB_PORT_TCP`.
+2. The Ethernet interface and the remote servers are configured with the L02 network relays and registers and with the `L02_SET_IP` function of the `Utils` library. `MB_PORT_SETTINGS` and the `MB_MASTER_INIT_*` functions are not used for a TCP channel: the Ethernet port has no serial settings.
+
+RS485 channels and TCP channels can be mixed in the same `MB_CHANNELS` array.
+
+> **Requirement:** an L02-series PLC with the built-in Ethernet interface. RS485-only Coolmay models have no usable `MB_PORT_TCP` channel.
+
+### Setup
+
+| Device | Value | Purpose |
+| ------ | ----- | ------- |
+| `D8395` | `4` | Modbus TCP master (client). `3` selects Modbus TCP server (see below). |
+| `D8325` | `1`–`4` | Number of remote servers polled by this PLC. |
+| `R23812` | `502` | Modbus TCP port. |
+| `M8197` | — | Pulse to apply the IP addresses and restart the interface. |
+| `M8193` | — | Network ready (`1` when the network is up). |
+| `M8395` | — | Connection status: `1` = communication normal, `0` = abnormal. |
+| `M8062` | — | Modbus timeout. |
+| `M8063` | — | IP address conflict. |
+| `R23815`, `R23816` | — | Number of Modbus packets sent / received. |
+
+IP addresses are written with `L02_SET_IP` from the `Utils` library (see the Utils manual). It takes a setting type followed by the four octets:
+
+| Setting type | Meaning |
+| ------------ | ------- |
+| `IP_PLC_IP` | IP address of the PLC |
+| `IP_PLC_MASK` | Subnet mask |
+| `IP_PLC_GATEWAY` | Gateway |
+| `IP_REMOTE1` … `IP_REMOTE4` | Remote server 1 … 4 |
+
+The IP writes must precede the `M8197` pulse in the same scan. `M8002` applies them once at startup; pulse `M8197` again (for example from the HMI) to apply changed addresses.
+
+### Remote Servers and `iDev`
+
+For a TCP channel the `iDev` field selects the remote server: `iDev := 1` addresses the server configured with `IP_REMOTE1`, `iDev := 2` the server configured with `IP_REMOTE2`, and so on up to `iDev := 4`. At most four servers are supported, and `D8325` must match the number actually used. `iNum` remains the number of registers or coils transferred and is unrelated to the server selection.
+
+### Timeout
+
+The PLC firmware retries a failed Modbus TCP request before reporting an error, so `mb_iTimeoutTime` must cover those retries: `mb_iTimeoutTime := 20` (1 s) is a practical starting value. Use a startup delay (`mb_tStartDelay := T#10s`) so that the first request waits for `M8193` (network ready).
+
+### Example — Modbus TCP Master
+
+Declare the function-block instance and the status labels in the local label section:
+
+```iecst
+VAR
+    fbMbProcess    : MB_PROCESS_50;
+    xSaveIp        : BOOL; (* pulse to re-apply the IP addresses   *)
+    xNetworkReady  : BOOL;
+    xConnection    : BOOL;
+    xModbusTimeout : BOOL;
+    xIPConflict    : BOOL;
+    iTX            : INT;
+    iRX            : INT;
+END_VAR
+```
+
+In the POU body, configure the Ethernet port, the channel and the scheduler:
+
+```iecst
+(* --- Ethernet setup of the L02 built-in port ---------------------- *)
+M0 := L02_SET_IP(TRUE, IP_PLC_IP, 192, 168, 1, 3);      (* PLC IP       *)
+M0 := L02_SET_IP(TRUE, IP_PLC_MASK, 255, 255, 255, 0);  (* subnet mask  *)
+M0 := L02_SET_IP(TRUE, IP_PLC_GATEWAY, 192, 168, 1, 1); (* gateway      *)
+M0 := L02_SET_IP(TRUE, IP_REMOTE1, 192, 168, 1, 5);     (* remote 1     *)
+
+R23812 := 502;                                          (* TCP port     *)
+
+(* Apply the IP addresses: first scan, and again after a change.      *)
+M8197 := M8002 OR MEP(xSaveIp);
+
+D8325 := 1;                     (* one remote server  *)
+D8395 := 4;                     (* Modbus TCP master  *)
+
+(* --- Status (monitoring) ------------------------------------------ *)
+xNetworkReady  := M8193;        (* 1 = network chip ready   *)
+xConnection    := M8395;        (* 1 = communication normal *)
+xModbusTimeout := M8062;        (* 1 = Modbus timeout       *)
+xIPConflict    := M8063;        (* 1 = IP address conflict  *)
+iTX            := R23815;       (* packets sent             *)
+iRX            := R23816;       (* packets received         *)
+
+(* --- Modbus channel ------------------------------------------------ *)
+IF M8002 THEN
+    MB_CHANNELS[0].xEnabled       := TRUE;
+    MB_CHANNELS[0].iDDevNum       := 1000;  (* values D1000, change tracking D1001 *)
+    MB_CHANNELS[0].iNum           := 1;
+    MB_CHANNELS[0].iReg           := K16384;
+    MB_CHANNELS[0].iRF            := H3;    (* read holding registers  *)
+    MB_CHANNELS[0].iWF            := H6;    (* write single register   *)
+    MB_CHANNELS[0].iDev           := 1;     (* remote server 1         *)
+    MB_CHANNELS[0].tCycle         := 20;    (* 20 x 50 ms = 1 s        *)
+    MB_CHANNELS[0].iWR            := MB_READ_WRITE;
+    MB_CHANNELS[0].iPort          := MB_PORT_TCP; (* mandatory          *)
+    MB_CHANNELS[0].xWriteOnChange := TRUE;
+END_IF;
+
+(* --- Scheduler ------------------------------------------------------ *)
+fbMbProcess(
+    mb_xEnable       := TRUE,
+    mb_iBuffer       := 900,
+    mb_iClearOnStart := MB_CLEAR_NONE,
+    mb_iTimeoutCount := 100,
+    mb_iSuspendRetry := 4,
+    mb_iTimeoutTime  := 20,
+    mb_tStartDelay   := T#10s);
+```
+
+After the startup delay the scheduler reads `D1000` every second from Modbus register `16384` of the server at `192.168.1.5` (`iDev = 1`). A local change to `D1000` is written to the server immediately, because `xWriteOnChange := TRUE`.
+
+### PLC as a Modbus TCP Server
+
+Setting `D8395 := 3` makes the PLC a Modbus TCP server (slave). In that role the PLC answers incoming requests directly, so no `MB_CHANNELS` entry is needed and the driver is not involved. `MB_PORT_TCP` channels are used only for the client (master) role.
+
+### Notes
+
+> - `iPort := MB_PORT_TCP` is mandatory; if it is left at an RS485 port, the channel is driven on that serial port instead of the Ethernet port.
+> - The IP addresses are written explicitly by the `L02_SET_IP` calls above; re-pulse `xSaveIp` after any address changes so that `M8197` applies them.
+> - `M8062` (Modbus timeout) and `M8395` (connection flag) are network indications that complement the driver's per-channel `mb_iTimeout` output. The suspend/retry policy is the same as for an RS485 channel.
+
+---
+
 ## Timeout and Suspension Mechanism
 
 The library implements a channel-suspension policy for fault tolerance. If a channel fails to receive a response for `mb_iTimeoutCount` consecutive attempts, it is flagged as **suspended**. Once suspended, the channel is polled at a reduced rate — once every `mb_iSuspendRetry` interval. As soon as a valid response is received, the suspension flag is cleared and the channel resumes its normal cycle interval as defined by `MB_CHANNELS[*].tCycle`.
 
-When an `ADPRW` request times out, `MB_PROCESS_50.mb_iTimeout` reports the index of the failing channel (0-based) for one scan and is `-1` otherwise. This output can be used to react to a specific channel timing out, e.g. to latch an alarm or log the event.
+When a request times out, `MB_PROCESS_50.mb_iTimeout` reports the index of the failing channel (0-based) for one scan and is `-1` otherwise. This output can be used to react to a specific channel timing out, e.g. to latch an alarm or log the event.
 
-The watchdog timer is evaluated **after** the request handling, so a request whose completion (`M8029`) arrives in the same block call as the timeout deadline is counted as a success (the `iTimeOut` counter is reset and the snapshot is updated) rather than as a timeout. Set `mb_iTimeoutTime` comfortably longer than the expected request + slave-response round-trip time and account for the block's call interval (see Timeout Tuning above); if it is too short every request is abandoned as timed out before its `M8029` arrives, the counter only ever increments, and the channel enters the suspend/retry loop without ever clearing.
+A request that completes within its time window is always counted as a success, even if the completion arrives in the same block call as the timeout deadline. Set `mb_iTimeoutTime` comfortably longer than the expected request and response round-trip time and account for the block's call interval (see Timeout Tuning above); if it is too short, every request is abandoned as timed out, the channel never clears its timeout counter, and it enters the suspend/retry loop.

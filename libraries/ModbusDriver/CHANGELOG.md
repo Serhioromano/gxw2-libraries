@@ -1,5 +1,12 @@
 # Changelog
 
+## V17 — 2026-10-01
+
+- **Documentation (`Modbus.md`):** Added a **Modbus TCP (Ethernet)** chapter covering the L02 built-in Ethernet port: mandatory `iPort := MB_PORT_TCP`, network setup devices (`D8395`, `D8325`, `R23812`, `M8197`, `M8193`, `M8395`, `M8062`, `M8063`, `R23815`/`R23816`), IP configuration through `Utils` `L02_SET_IP` / the `IP_*` constants, `iDev` as the remote server index (`1`–`4` ↔ `IP_REMOTE1`–`IP_REMOTE4`), TCP timeout guidance, a complete Modbus TCP master example and the Modbus TCP server mode. The chapter is placed at the end of the document, next to the main example.
+- **Documentation (`Modbus.md`):** Reworked the manual to be usage-oriented — removed implementation detail (the `D8397` port-selector write, `ADPRW` / `M8029` references, watchdog evaluation order, the library-managed `MB_REG_50` field table, the cause of the `M8013` port re-initialisation requirement) and the raw IP register / `IP_*` register-pair mapping, which is now covered by `L02_SET_IP` in the Utils manual. Corrected the architectural workflow (the `MB_*_INIT_*` step is not used for TCP channels; removed the reference to the removed timeout globals).
+- **Documentation (`AGENT.md`):** Added developer notes for Modbus TCP (platform requirement, application-side network setup, `iDev` semantics) and a note that `Modbus.md` must stay user-facing while implementation detail belongs in `AGENT.md`.
+- **Build:** No POU changes, `Modbus.sul` is unchanged. Regenerate `Modbus.pdf` from `Modbus.md` in VS Code to propagate the documentation change.
+
 ## V16 — 2026-09-17
 
 - **Fixed (`MB_PROCESS_50.iecst`):** A stale difference between a channel's value buffer and its change-tracking buffer no longer blocks reads on manual-only channels. The read-result protection (which discards a completed read when the value buffer changed while the request was in flight) is now applied only when the scheduler will actually write that change — `xWriteOnChange = TRUE`, `tCycle > 0`, or a pending `xWriteOnce`. For a manual-only channel (`tCycle = 0`, `xWriteOnChange = FALSE`) with no `xWriteOnce` pending, a completed read now resynchronises the value and change-tracking buffers, so a value register cleared or edited by hand is not held in a permanently stale state.
