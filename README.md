@@ -198,3 +198,28 @@ ModbusDriver, Easing и PumpControl подключены как отдельны
 - `.md` — основной источник документации, пишется вручную.
 - `.pdf` — генерируется из `.md` (расширение VS Code Markdown PDF, см. `.vscode/settings.json`).
 - `CHANGELOG.md` — ведётся при каждом изменении библиотеки.
+
+### Если PDF не создаётся: «Chromium could not be started»
+
+Расширение Markdown PDF выбирает браузер в таком порядке: `markdown-pdf.executablePath` → системный Chrome/Edge → автоскачивание Chrome. Если в системе есть только Microsoft Edge, экспорт падает:
+
+```text
+Hint: Chromium could not be started. Set a valid Chromium path or enable auto-download.
+Error: Failed to launch the browser process:  Code: 0
+```
+
+Причина: обычный Edge передаёт управление своим фоновым процессам (startup boost) и сразу завершается с кодом 0 — Puppeteer остаётся без управляемого браузера. Поэтому «обновите Edge / перезагрузка» помогает лишь до следующего запуска Edge. Журнал работы расширения: `%APPDATA%\Code\logs\<сессия>\window1\exthost\yzane.markdown-pdf\Markdown PDF.log`.
+
+Решение — отдельный Chrome for Testing (он не участвует в обычном сёрфинге, поэтому передачи управления не происходит):
+
+```powershell
+npx @puppeteer/browsers install chrome@stable --path "$env:LOCALAPPDATA\ChromeForTesting"
+```
+
+Затем прописать полученный путь в настройках **пользователя** VS Code (`%APPDATA%\Code\User\settings.json`), а не в настройках репозитория, т.к. путь машинозависимый:
+
+```jsonc
+"markdown-pdf.executablePath": "C:\\Users\\<user>\\AppData\\Local\\ChromeForTesting\\chrome\\win64-<версия>\\chrome-win64\\chrome.exe"
+```
+
+> **Важно:** если `settings.json` правится из WSL (через `/mnt/c/...`), уже запущенный VS Code может не заметить изменение — в логе так и будет `executablePath: (not set)`. Признак того, что настройка подхватилась: в логе `executablePath: C:\...chrome.exe` и `Chromium: ... (source: user-setting)`. Если этого нет — перезагрузите окно: `Ctrl+Shift+P` → `Developer: Reload Window`.
