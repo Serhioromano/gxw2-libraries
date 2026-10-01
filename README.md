@@ -223,3 +223,21 @@ npx @puppeteer/browsers install chrome@stable --path "$env:LOCALAPPDATA\ChromeFo
 ```
 
 > **Важно:** если `settings.json` правится из WSL (через `/mnt/c/...`), уже запущенный VS Code может не заметить изменение — в логе так и будет `executablePath: (not set)`. Признак того, что настройка подхватилась: в логе `executablePath: C:\...chrome.exe` и `Chromium: ... (source: user-setting)`. Если этого нет — перезагрузите окно: `Ctrl+Shift+P` → `Developer: Reload Window`.
+
+### Подсветка синтаксиса ST в PDF
+
+Код в PDF подсвечивает highlight.js v11 (стиль выбирается настройкой `markdown-pdf.highlightStyle`: `github.css`, `monokai.css`, `base16/solarized-dark.css` и т.п.; по умолчанию — `tomorrow.css`). В highlight.js **нет языка IEC 61131-3**, поэтому блоки ` ```iecst ` выводились как обычный текст (только фон, без цветов). Лечится регистрацией грамматики [`highlightjs-structured-text`](https://www.npmjs.com/package/highlightjs-structured-text) внутри установленного расширения:
+
+```bash
+npm run patch-markdown-pdf            # пропатчить все найденные установки markdown-pdf
+npm run check-markdown-pdf            # только проверить статус
+npm run patch-markdown-pdf -- --revert  # откатить
+```
+
+Что делает скрипт [`scripts/patch-markdown-pdf.mjs`](scripts/patch-markdown-pdf.mjs):
+
+- копирует грамматику [`scripts/vendor/hljs-iecst.js`](scripts/vendor/hljs-iecst.js) в `<расширение>/dist/hljs-iecst.js`;
+- добавляет в `buildHighlightCallback()` бандла `dist/extension.js` строку регистрации языка `iecst` (плюс алиасы `stl`, `scl`, `structured-text`);
+- сохраняет бэкап `dist/extension.js.orig`, проверяет результат `node --check` и откатывается при ошибке.
+
+> Патч ставится поверх установленного расширения, поэтому **после каждого обновления markdown-pdf его нужно применять заново** (`npm run patch-markdown-pdf`). После патча перезагрузите окно VS Code (`Developer: Reload Window`). Сами `.md` менять не нужно — теги ```` ```iecst ```` остаются едиными и для PDF, и для редактора (vscode-st), и для GitHub.
