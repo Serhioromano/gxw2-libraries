@@ -41,7 +41,7 @@ iValueOut := SEL(
 	SEL(
 		xIsScalable,
 		iTemp,
-		F_SCALE(iTemp, 0, 4000, iMin, iMax)
+		F_SCALE(iTemp, 0, 4092, iMin, iMax)
 	) + iCorrection,
 	0
 );
