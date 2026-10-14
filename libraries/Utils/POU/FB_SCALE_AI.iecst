@@ -1,5 +1,5 @@
 (* Select channel: clamp iAINum 0..16 into index register Z3 *)
-Z3    := LIMITATION(0, iAINum, 16);
+Z3 := LIMITATION(0, iAINum, 16);
 iTemp := D8030Z3;
 
 (* Configure sensor type, filter count and filter time *)
@@ -7,20 +7,39 @@ MOV(M8002, iSType, R23940Z3);
 MOV(M8002, LIMITATION(2, SEL(iFilterNum = 0, iFilterNum, 100), 20000), R23600Z3);
 MOV(M8002, LIMITATION(2, iFilterTime, 60), D8020Z3);
 
-xErrLimit  := FALSE;
-xErrWire   := FALSE;
+xErrLimit := FALSE;
+xErrWire := FALSE;
 xErrMinMax := FALSE;
 
+xIstemperature := (
+	iSType = STYPE_TC_T OR
+	iSType = STYPE_TC_S OR
+	iSType = STYPE_TC_E OR
+	iSType = STYPE_TC_J OR
+	iSType = STYPE_TC_K OR
+	iSType = STYPE_PT100 OR
+	iSType = STYPE_PT1000 OR
+	iSType = STYPE_NTC
+);
+
+xIsScalable := (
+	iSType = STYPE_0_10V OR 
+	iSType = STYPE_0_20MA OR 
+	iSType = STYPE_4_20MA
+);
+
+
 (* Detect wire break, bad limits and min=max on scalable types *)
-SET(iTemp = 32760, xErrWire);
+SET(iTemp = 32760 AND xIsScalable, xErrWire);
+SET(iTemp = -1900 AND xIstemperature, xErrWire);
 SET((iMin >= iMax), xErrLimit);
-SET(((iSType = STYPE_0_10V OR iSType = STYPE_0_20MA OR iSType = STYPE_4_20MA) AND iMin = iMax AND iMin = 0), xErrMinMax);
+SET((xIsScalable AND iMin = iMax AND iMin = 0), xErrMinMax);
 
 (* Output scaled value, 0 on error *)
 iValueOut := SEL(
 	(xErrMinMax OR xErrLimit OR xErrWire),
 	SEL(
-		(iSType = STYPE_0_10V OR iSType = STYPE_0_20MA OR iSType = STYPE_4_20MA),
+		xIsScalable,
 		iTemp,
 		F_SCALE(iTemp, 0, 4000, iMin, iMax)
 	) + iCorrection,
