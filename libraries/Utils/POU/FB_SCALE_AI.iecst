@@ -31,8 +31,8 @@ xIsScalable := (
 
 (* Detect wire break, bad limits and min=max on scalable types *)
 SET(iTemp = 32760 AND xIsScalable, xErrWire);
-SET(iTemp = -1900 AND xIstemperature, xErrWire);
-SET((iMin >= iMax), xErrLimit);
+SET(iTemp = -1990 AND xIstemperature, xErrWire);
+SET((iMin >= iMax) AND xIsScalable, xErrLimit);
 SET((xIsScalable AND iMin = iMax AND iMin = 0), xErrMinMax);
 
 (* Output scaled value, 0 on error *)
