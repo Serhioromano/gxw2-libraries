@@ -1,6 +1,6 @@
-# Utils V6 — Library for Coolmay FX3G PLC
+# Utils V7 — Library for Coolmay FX3G PLC
 
-Utils is a library of general-purpose functions and function blocks for Mitsubishi FX3G PLCs programmed in GX Works 2. It provides bit-level WORD/DWORD manipulation, linear and non-linear scaling, on/off hysteresis regulators, index rotation and shifting, progress calculation, a 3-position valve controller, analog-input scaling for the host PLC and L02 modules, and L02 IP configuration.
+Utils is a library of general-purpose functions and function blocks for Mitsubishi FX3G PLCs programmed in GX Works 2. It provides bit-level WORD/DWORD manipulation, linear and non-linear scaling, sign negation, on/off hysteresis regulators, index rotation and shifting, progress calculation, a 3-position valve controller, analog-input scaling for the host PLC and L02 modules, and L02 IP configuration.
 
 The functions are stateless: they return their result directly and are designed to be used inside expressions. The function blocks hold internal state and are called every scan.
 
@@ -57,6 +57,8 @@ Scaling is provided in three forms: linear 16-bit (`F_SCALE`), linear 32-bit (`F
 | `F_SCALE_NL` | Function | Non-linearly scale an INT through a point table |
 | `F_INCN` | Function | Increment an index with wrap-around |
 | `F_SHFT` | Function | Shift an index within a range |
+| `F_NEG` | Function | Negate an INT value |
+| `F_DNEG` | Function | Negate a DINT value |
 | `F_WORK_LEFT` | Function | Progress 100..0 from elapsed/total (INT units) |
 | `F_WORK_LEFT_TIME` | Function | Progress 100..0 from elapsed/total (TIME) |
 | `F_VALVE_POS` | Function | Valve position 0..1000 from elapsed/total TIME |
@@ -384,6 +386,41 @@ iShiftedCount := F_SHFT(iShifter, iCount, 2);
 ```
 
 With an array of 3 pumps, `iShifter` values of `0, 1, 2` make `iShiftedCount` start the cascade at index `0`, `1`, or `2` respectively.
+
+### `F_NEG`
+
+Negates an `INT` value.
+
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `iIn` | INPUT | INT | Input value to negate |
+
+**Example:**
+
+```iecst
+a := F_NEG(120) (* A = -120 *)
+b := F_NEG(-1254) (* A = 1254 *)
+iDiff := F_NEG(iSetpoint - iActual);
+(* iDiff = -(iSetpoint - iActual) *)
+```
+
+> **Note:** `F_NEG` returns `INT`; set the function return type to `INT` in the GX Works 2 POU properties.
+>
+> `-32768` has no positive counterpart in the `INT` range, so `F_NEG(-32768)` returns `-32768`. Use `F_DNEG` when that value must be handled correctly.
+
+### `F_DNEG`
+
+The 32-bit counterpart of `F_NEG`. 
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `diIn` | INPUT | DINT | Input value to negate |
+
+
+> **Note:** `F_DNEG` returns `DINT`; set the function return type to `DINT` in the GX Works 2 POU properties.
+>
+> `-2147483648` has no positive counterpart in the `DINT` range, so `F_DNEG(-2147483648)` returns `-2147483648`.
 
 ---
 

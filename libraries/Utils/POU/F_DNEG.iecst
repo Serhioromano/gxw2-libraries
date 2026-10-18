@@ -1,0 +1,3 @@
+(* Negate diIn by multiplying it by -1. Returns DINT.
+   Note: -2147483648 has no positive counterpart, F_DNEG(-2147483648) returns -2147483648. *)
+F_DNEG := diIn * (-1);

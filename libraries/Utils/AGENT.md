@@ -2,7 +2,7 @@
 
 ## Overview
 
-Utils is a Structured Text library for Coolmay FX3G PLCs (GX Works 2) providing general-purpose utility functions and function blocks: bit-level WORD/DWORD manipulation, linear and non-linear scaling, on/off hysteresis regulators, index rotation/shifting, progress calculation, 3-position valve control, analog-input scaling (host PLC and L02 modules), L02 IP configuration, and block memory move. L02 POUs have no prefix.
+Utils is a Structured Text library for Coolmay FX3G PLCs (GX Works 2) providing general-purpose utility functions and function blocks: bit-level WORD/DWORD manipulation, linear and non-linear scaling, sign negation, on/off hysteresis regulators, index rotation/shifting, progress calculation, 3-position valve control, analog-input scaling (host PLC and L02 modules), L02 IP configuration, and block memory move. L02 POUs have no prefix.
 
 ## File Structure
 
@@ -23,6 +23,8 @@ POU/
 ├── F_SCALE_NL.iecst / .csv         — Function: non-linear scale through a D-register point table
 ├── F_INCN.iecst / .csv             — Function: increment an index 0..iMax with wrap
 ├── F_SHFT.iecst / .csv             — Function: shift an index within 0..iMax
+├── F_NEG.iecst / .csv              — Function: negate an INT (multiply by -1)
+├── F_DNEG.iecst / .csv             — Function: negate a DINT (multiply by -1)
 ├── F_WORK_LEFT.iecst / .csv        — Function: progress 100..0 from elapsed/total (INT)
 ├── F_WORK_LEFT_TIME.iecst / .csv   — Function: progress 100..0 from elapsed/total (TIME)
 ├── F_VALVE_POS.iecst / .csv        — Function: valve position % from elapsed/total TIME
@@ -62,6 +64,8 @@ POU/
 | `F_SCALE_NL` | INT | Non-linear scale `iPV` through a point table at `iDStart` |
 | `F_INCN` | INT | Increment `iCur` within `0..iMax` (wrap) when `xIn` |
 | `F_SHFT` | INT | Shift `iIdx` by `iShifter` within `0..iMax` |
+| `F_NEG` | INT | Negate `iIn` (multiply by `-1`) |
+| `F_DNEG` | DINT | Negate `diIn` (multiply by `-1`) |
 
 ### Progress / time functions
 
@@ -114,7 +118,8 @@ Constants only — no device-bound variables.
 - Functions are called positionally (`result := F_SCALE(50, 0, 100, 0, 1000, FALSE);`); FBs are called with named arguments (`fbHyst(xIn := …, iSV := …)`). `PRG_UTL_TEST` enforces this style.
 - `F_SCALE` and `F_DSCALE` have six inputs: the five ranges plus the trailing `xNoLimit` flag. A new input parameter is always appended last, so the first five positional arguments keep their meaning; every call site must still pass the flag explicitly (`FALSE` = clamp as before). Callers inside the library: `F_WORK_LEFT`, `F_SCALE_NL`, `FB_SCALE_AI`, `L02_SCALE_AI` (for `F_SCALE`), `F_WORK_LEFT_TIME`, `F_VALVE_POS` (for `F_DSCALE`).
 - `F_MBMOV` and `L02_SET_IP` are "command" functions with no return assignment — they always return the default (`FALSE`). Call them for their device side effects, not for a result.
-- `F_FLT10` returns `REAL` (body is `INT_TO_REAL(iIn) / 10.0`) — set the return type to REAL in the GX Works 2 POU properties.
+- `F_FLT10` returns `REAL` (body is `INT_TO_REAL(iIn) / 10.0`) — set the return type to REAL in the GX Works 2 POU properties. `F_NEG` returns `INT` and `F_DNEG` returns `DINT`; both are set the same way.
+- `F_NEG` / `F_DNEG` negate by multiplication with `-1`, so the most negative value of the type (`-32768` / `-2147483648`) has no positive counterpart and is returned unchanged. `F_DNEG` tolerates a DINT multiplied by an `INT` literal, as `FB_VALVE_3P` already does (`DWORD_TO_DINT(dwTemp) * 50`).
 - `F_SCALE_NL`, `L02_SET_IP`, `F_MBMOV`, `FB_SCALE_AI`, `L02_SCALE_AI`, `FB_VALVE_3P` use direct device / index-register access (`Z3`/`Z5`, `D0Z5`, `R0Z5`, `M0Z4`, `D8030Z3`, `R23500Z3`, `R23700Z3`, …). Do not rename those device references — they are not labels.
 - `FB_VALVE_3P` requires the **TimeControl** library (`TCO_DINT_50` ticker).
 - Return types are set in the GX Works 2 POU properties (not visible in the CSV). See the Public API table.

@@ -1,5 +1,12 @@
 # Changelog
 
+## V7 — 2026-08-22
+
+- **Added:** `F_NEG` — negates an `INT` by multiplying it by `-1`; input `iIn`, returns `INT`. `F_NEG(-32768)` returns `-32768` because that value has no positive counterpart.
+- **Added:** `F_DNEG` — the `DINT` counterpart of `F_NEG`; input `diIn`, returns `DINT`. `F_DNEG(-2147483648)` returns `-2147483648` for the same reason.
+- **Test program:** `PRG_UTL_TEST` now exercises both functions (`iNeg` = `F_NEG(125)` → `-125`, `diDNeg` = `F_DNEG(-150000)` → `150000`) and lists them in its header.
+- **Documentation:** added `F_NEG` / `F_DNEG` sections to `Utils.md` (parameter tables, examples, return-type and overflow notes), extended the summary table and the abstract, and updated `AGENT.md`.
+
 ## V6 — 2026-08-21
 
 - **`F_SCALE`:** added a sixth input `xNoLimit` (BOOL). `FALSE` — the input and the result are clamped to their ranges (previous behaviour); `TRUE` — no clamping at all, values outside the ranges are extrapolated linearly. The parameter is appended after `iOutHigh`, so the meaning of the first five positional arguments is unchanged.

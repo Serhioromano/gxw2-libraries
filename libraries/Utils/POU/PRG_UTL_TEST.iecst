@@ -1,13 +1,13 @@
 (*
   Utils library smoke test.
 
-  Calls every function (F_*) and function block (FB_*) of the Utils library
+  Calls every function `F_*` and function block `FB_*` of the Utils library
   with representative test inputs. Results are stored in auto-assigned labels
   so they can be watched in the device monitor.
 
   Functions exercised:
     F_ISBON / F_DISBON / F_SETB / F_DSETB / F_RSTB / F_DRSTB / F_SRB / F_DSRB
-    F_LIMIT / F_SCALE / F_SCALE_NL / F_INCN / F_SHFT
+    F_LIMIT / F_SCALE / F_SCALE_NL / F_INCN / F_SHFT / F_NEG / F_DNEG
     F_WORK_LEFT / F_WORK_LEFT_TIME / F_VALVE_POS / F_FLT10
     F_L02_SET_IP / F_MBMOV
 
@@ -46,6 +46,9 @@ diDScaleNoLimit := F_DSCALE(150000, 0, 100000, 0, 1000000, TRUE);   (* extrapola
 
 iIncrement := F_INCN(TRUE, 2, 5);
 iShift     := F_SHFT(2, 4, 5);
+
+iNeg   := F_NEG(125);          (* -125 *)
+diDNeg := F_DNEG(-150000);     (* 150000 *)
 
 (* --- Progress / time functions --- *)
 iWorkLeft     := F_WORK_LEFT(25, 100);

@@ -1,0 +1,26 @@
+# Line-ending policy for the GX Works 2 library repository.
+#
+# The repository stores LF in the object database. Working copies of ST sources
+# keep CRLF because GX Works 2 and Windows editors write CRLF; the eol=crlf
+# attribute makes git normalise both directions, so the files neither show up as
+# modified nor get committed with CRLF.
+#
+# CSV label files are UTF-16 LE with BOM (binary for git) - they must never be
+# line-ending converted, otherwise the encoding is destroyed.
+
+* text=auto
+
+*.iecst text eol=crlf
+*.md    text eol=lf
+*.json  text eol=lf
+*.mjs   text eol=lf
+*.js    text eol=lf
+*.yaml  text eol=lf
+.gitignore text eol=lf
+
+# Binary assets - never diff or convert
+*.csv   binary
+*.sul   binary
+*.pdf   binary
+*.png   binary
+*.gxw   binary
