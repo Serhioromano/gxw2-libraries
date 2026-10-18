@@ -31,7 +31,6 @@
   "main": "skills/gxw2-libraries/SKILL.md",
   "files": [
     "README.md",
-    "scripts",
     "skills"
   ],
   "pi": {
@@ -44,7 +43,6 @@
     "check-skill": "node scripts/sync-skill.mjs --check",
     "patch-markdown-pdf": "node scripts/patch-markdown-pdf.mjs",
     "check-markdown-pdf": "node scripts/patch-markdown-pdf.mjs --check",
-    "prepare": "node scripts/sync-skill.mjs --quiet",
     "prepack": "node scripts/sync-skill.mjs --quiet"
   }
 }
