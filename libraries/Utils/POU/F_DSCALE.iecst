@@ -1,8 +1,28 @@
-(* Scale diVal from diInLow..diInHigh to diOutLow..diOutHigh. Returns DINT. *)
-IF diInLow = diInHigh THEN
-	rTemp := DINT_TO_REAL(diOutLow);
-ELSE
-	rTemp := DINT_TO_REAL(diOutHigh - diOutLow) / DINT_TO_REAL(diInHigh - diInLow) *
-		DINT_TO_REAL(LIMITATION(diInLow, diVal, diInHigh) - diInLow) + DINT_TO_REAL(diOutLow);
+(* Scale diVal from diInLow..diInHigh to diOutLow..diOutHigh. Returns DINT.
+   xNoLimit = FALSE: diVal is clamped to the input range and the result to the
+   output range, so the value never leaves diOutLow..diOutHigh.
+   xNoLimit = TRUE: no clamping at all, values outside the ranges are
+   extrapolated linearly - the caller keeps the result inside -2147483648..2147483647. *)
+IF diInHigh = diInLow THEN
+	(* Degenerate input range: no slope, avoid a division by zero *)
+	F_DSCALE := diOutLow;
+    RETURN;
 END_IF;
-F_DSCALE := LIMITATION(diOutLow, REAL_TO_DINT(rTemp), diOutHigh);
+
+(* Clamp the input value to the input range (diVal is passed as is when xNoLimit) *)
+diValue := SEL(
+    xNoLimit,
+    SEL(diInLow <= diInHigh, LIMITATION(diInHigh, diVal, diInLow), LIMITATION(diInLow, diVal, diInHigh)),
+    diVal
+);
+
+(* Linear interpolation, or extrapolation when xNoLimit is TRUE *)
+rNumber := (DINT_TO_REAL(diOutHigh) - DINT_TO_REAL(diOutLow)) / (DINT_TO_REAL(diInHigh) - DINT_TO_REAL(diInLow));
+F_DSCALE := REAL_TO_DINT((DINT_TO_REAL(diValue) * rNumber) + DINT_TO_REAL(diOutLow) - (rNumber * DINT_TO_REAL(diInLow)));
+
+(* Clamp the result to the output range (result is passed as is when xNoLimit) *)
+F_DSCALE := SEL(
+    xNoLimit,
+    SEL(diOutLow <= diOutHigh, LIMITATION(diOutHigh, F_DSCALE, diOutLow), LIMITATION(diOutLow, F_DSCALE, diOutHigh)),
+    F_DSCALE
+);

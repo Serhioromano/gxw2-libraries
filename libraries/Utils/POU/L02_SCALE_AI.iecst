@@ -13,7 +13,7 @@ iValueOut := SEL(
     iTemp,
     SEL(
         iMin = iMax,
-        F_SCALE(iTemp, 0, 32000, iMin, iMax),
+        F_SCALE(iTemp, 0, 32000, iMin, iMax, FALSE),
         iMin
     )
 ) + iCorrection;

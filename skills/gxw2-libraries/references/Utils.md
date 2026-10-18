@@ -1,4 +1,4 @@
-# Utils V4 — Library for Coolmay FX3G PLC
+# Utils V6 — Library for Coolmay FX3G PLC
 
 Utils is a library of general-purpose functions and function blocks for Mitsubishi FX3G PLCs programmed in GX Works 2. It provides bit-level WORD/DWORD manipulation, linear and non-linear scaling, on/off hysteresis regulators, index rotation and shifting, progress calculation, a 3-position valve controller, analog-input scaling for the host PLC and L02 modules, and L02 IP configuration.
 
@@ -35,7 +35,7 @@ The library is split into two groups of POUs:
 
 Bit-manipulation functions operate on either a 16-bit `WORD` (`F_ISBON`, `F_SETB`, `F_RSTB`, `F_SRB`) or a 32-bit `DWORD` (`F_DISBON`, `F_DSETB`, `F_DRSTB`, `F_DSRB`). They take the device/value to modify and a 0-based bit number, and return the result directly.
 
-Scaling is provided in three forms: linear 16-bit (`F_SCALE`), linear 32-bit (`F_DSCALE`), and non-linear through a point table (`F_SCALE_NL`). Analog inputs are scaled by the dedicated blocks `FB_SCALE_AI` (host PLC, `D8030` area) and `L02_SCALE_AI` (L02 modules, `R23700` area).
+Scaling is provided in three forms: linear 16-bit (`F_SCALE`), linear 32-bit (`F_DSCALE`), and non-linear through a point table (`F_SCALE_NL`). Both linear forms accept an `xNoLimit` flag that selects between clamping (normalisation) and unclamped linear extrapolation. Analog inputs are scaled by the dedicated blocks `FB_SCALE_AI` (host PLC, `D8030` area) and `L02_SCALE_AI` (L02 modules, `R23700` area).
 
 ---
 
@@ -52,8 +52,8 @@ Scaling is provided in three forms: linear 16-bit (`F_SCALE`), linear 32-bit (`F
 | `F_SRB` | Function | Set or reset a single bit in a WORD by a BOOL |
 | `F_DSRB` | Function | Set or reset a single bit in a DWORD by a BOOL |
 | `F_LIMIT` | Function | Clamp an INT value to a range |
-| `F_SCALE` | Function | Linearly scale an INT between two ranges |
-| `F_DSCALE` | Function | Linearly scale a DINT between two ranges |
+| `F_SCALE` | Function | Linearly scale an INT between two ranges, optionally without clamping |
+| `F_DSCALE` | Function | Linearly scale a DINT between two ranges, optionally without clamping |
 | `F_SCALE_NL` | Function | Non-linearly scale an INT through a point table |
 | `F_INCN` | Function | Increment an index with wrap-around |
 | `F_SHFT` | Function | Shift an index within a range |
@@ -225,7 +225,12 @@ iValue := F_LIMIT(100, iValue, 0);
 
 ### `F_SCALE`
 
-Linearly scales `iVal` from the input range `iInLow..iInHigh` to the output range `iOutLow..iOutHigh` and returns the result as an `INT`. The input value is first clamped to the input range; the result is clamped to the output range.
+Linearly scales `iVal` from the input range `iInLow..iInHigh` to the output range `iOutLow..iOutHigh` and returns the result as an `INT`. Both ranges may be ascending or descending. The calculated value is converted to `INT` by truncation, not by rounding, so a result of `78.94` is returned as `78`.
+
+Clamping is controlled by `xNoLimit`:
+
+- `xNoLimit = FALSE` — `iVal` is clamped to the input range before scaling, and the result is clamped to the output range. The returned value never leaves `iOutLow..iOutHigh`.
+- `xNoLimit = TRUE` — no clamping is performed at all. Values outside the input range are extrapolated linearly, therefore the result may lie outside `iOutLow..iOutHigh`, including negative values.
 
 | Variable | Scope | Type | Description |
 |----------|-------|------|-------------|
@@ -234,18 +239,48 @@ Linearly scales `iVal` from the input range `iInLow..iInHigh` to the output rang
 | `iInHigh` | INPUT | INT | Input range maximum |
 | `iOutLow` | INPUT | INT | Output range minimum |
 | `iOutHigh` | INPUT | INT | Output range maximum |
+| `xNoLimit` | INPUT | BOOL | `FALSE` — clamp the input and the result to their ranges; `TRUE` — no clamping, extrapolation allowed |
 
-**Example:**
+**Example 1 — clamping (normalisation):**
 
 ```iecst
-D8052 := F_SCALE(iPidTask, 0, 100, 0, 4000);
+D8052 := F_SCALE(iPidTask, 0, 100, 0, 4000, FALSE);
 ```
 
-`iPidTask` holds 0..100 and `D8052` is the system register that controls analog output `DA2`, which accepts 0..4000.
+`iPidTask` holds 0..100 and `D8052` is the system register that controls analog output `DA2`, which accepts 0..4000. A task value of `80` produces `3200`; a task value of `120` produces `4000`, because the input is clamped to the input range before scaling.
+
+**Example 2 — extrapolation:**
+
+```iecst
+(* Display the negative deviation of a temperature sensor 0..100 -> 0..1000 *)
+iDeviation := F_SCALE(iTemperature, 0, 100, 0, 1000, TRUE);
+```
+
+With `xNoLimit = TRUE` a temperature of `-5` produces `-50` instead of `0`, which is convenient when the output is a signed deviation rather than a physical actuator signal.
+
+**Example 3 — descending ranges:**
+
+```iecst
+(* Invert a 4..20 mA channel: raw 0..4092 -> 100..0 % *)
+iDuty := F_SCALE(iRawAI, 0, 4092, 100, 0, FALSE);
+```
+
+A raw value of `0` produces `100`, a raw value of `4092` produces `0`. Either range, or both, may be given in descending order.
+
+> **Note:** When `iInHigh` equals `iInLow` the input range has no slope. The function does not attempt the division and returns `iOutLow`.
+
+> **Note:** Arithmetic is performed in `REAL` and converted back by truncation. A result computed by an exact rational formula may differ by **1** count, which is normally negligible for engineering units.
+
+> **Note:** With `xNoLimit = TRUE` the returned value is not constrained to the `INT` range. An extrapolated result outside `-32768..32767` overflows the conversion and raises a PLC operation error, therefore the caller is responsible for keeping `iVal` inside a range that maps into `INT` limits.
 
 ### `F_DSCALE`
 
-DINT version of `F_SCALE`: linearly scales a `DINT` between two `DINT` ranges and returns a `DINT`.
+`DINT` version of `F_SCALE`: linearly scales `diVal` from the input range `diInLow..diInHigh` to the output range `diOutLow..diOutHigh` and returns the result as a `DINT`. Both ranges may be ascending or descending. The calculated value is converted to `DINT` by truncation, not by rounding.
+
+Clamping is controlled by `xNoLimit` in the same way as in `F_SCALE`:
+
+- `xNoLimit = FALSE` — `diVal` is clamped to the input range before scaling, and the result is clamped to the output range. The returned value never leaves `diOutLow..diOutHigh`.
+- `xNoLimit = TRUE` — no clamping is performed at all. Values outside the input range are extrapolated linearly, therefore the result may lie outside `diOutLow..diOutHigh`, including negative values.
 
 | Variable | Scope | Type | Description |
 |----------|-------|------|-------------|
@@ -254,14 +289,37 @@ DINT version of `F_SCALE`: linearly scales a `DINT` between two `DINT` ranges an
 | `diInHigh` | INPUT | DINT | Input range maximum |
 | `diOutLow` | INPUT | DINT | Output range minimum |
 | `diOutHigh` | INPUT | DINT | Output range maximum |
+| `xNoLimit` | INPUT | BOOL | `FALSE` — clamp the input and the result to their ranges; `TRUE` — no clamping, extrapolation allowed |
 
-**Example:**
+**Example 1 — clamping:**
 
 ```iecst
-diResult := F_DSCALE(diVacuumSensor, 0, 32000, 0, 100000);
+diResult := F_DSCALE(diVacuumSensor, 0, 32000, 0, 100000, FALSE);
 ```
 
-This scales a vacuum sensor from 0..32000 raw units to 0..100000 Pa.
+This scales a vacuum sensor from 0..32000 raw units to 0..100000 Pa. A raw value of `40000` produces `100000`, because the input is clamped before scaling.
+
+**Example 2 — extrapolation:**
+
+```iecst
+diDeviation := F_DSCALE(diPosition, 0, 100000, 0, 1000000, TRUE);
+```
+
+With `xNoLimit = TRUE` a position of `-5000` produces `-50000` instead of `0`.
+
+**Example 3 — descending ranges:**
+
+```iecst
+diDuty := F_DSCALE(diTime, 0, 600000, 1000, 0, FALSE);
+```
+
+A time of `0` produces `1000`, a time of `600000` produces `0`. Either range, or both, may be given in descending order.
+
+> **Note:** When `diInHigh` equals `diInLow` the input range has no slope. The function does not attempt the division and returns `diOutLow`.
+
+> **Note:** The arithmetic is performed in `REAL`, which carries a **24-bit** mantissa. Values with more than 7 significant digits are rounded before the calculation, therefore large `DINT` operands (above `16777216`) lose their low-order digits and the result may deviate from an exact rational computation. Time and sensor values in the usual PLC ranges are not affected.
+
+> **Note:** With `xNoLimit = TRUE` the returned value is not constrained to the `DINT` range. An extrapolated result outside `-2147483648..2147483647` overflows the conversion, therefore the caller is responsible for keeping `diVal` inside a range that maps into `DINT` limits.
 
 ### `F_SCALE_NL`
 

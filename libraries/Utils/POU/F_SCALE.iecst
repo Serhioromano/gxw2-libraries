@@ -1,7 +1,28 @@
-(* Scale iVal from iInLow..iInHigh to iOutLow..iOutHigh. Returns INT. *)
-iValue := SEL(iInLow <= iInHigh, LIMITATION(iInHigh, iVal, iInLow), LIMITATION(iInLow, iVal, iInHigh));
+(* Scale iVal from iInLow..iInHigh to iOutLow..iOutHigh. Returns INT.
+   xNoLimit = FALSE: iVal is clamped to the input range and the result to the
+   output range, so the value never leaves iOutLow..iOutHigh.
+   xNoLimit = TRUE: no clamping at all, values outside the ranges are
+   extrapolated linearly - the caller keeps the result inside -32768..32767. *)
+IF iInHigh = iInLow THEN
+	(* Degenerate input range: no slope, avoid a division by zero *)
+	F_SCALE := iOutLow;
+    RETURN;
+END_IF;
 
+(* Clamp the input value to the input range (iVal is passed as is when xNoLimit) *)
+iValue := SEL(
+    xNoLimit,
+    SEL(iInLow <= iInHigh, LIMITATION(iInHigh, iVal, iInLow), LIMITATION(iInLow, iVal, iInHigh)),
+    iVal
+);
+
+(* Linear interpolation, or extrapolation when xNoLimit is TRUE *)
 rNumber := (INT_TO_REAL(iOutHigh) - INT_TO_REAL(iOutLow)) / (INT_TO_REAL(iInHigh) - INT_TO_REAL(iInLow));
 F_SCALE := REAL_TO_INT((INT_TO_REAL(iValue) * rNumber) + INT_TO_REAL(iOutLow) - (rNumber * INT_TO_REAL(iInLow)));
 
-F_SCALE := SEL(iOutLow <= iOutHigh, LIMITATION(iOutHigh, F_SCALE, iOutLow), LIMITATION(iOutLow, F_SCALE, iOutHigh));
+(* Clamp the result to the output range (result is passed as is when xNoLimit) *)
+F_SCALE := SEL(
+    xNoLimit,
+    SEL(iOutLow <= iOutHigh, LIMITATION(iOutHigh, F_SCALE, iOutLow), LIMITATION(iOutLow, F_SCALE, iOutHigh)),
+    F_SCALE
+);

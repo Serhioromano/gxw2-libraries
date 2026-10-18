@@ -35,9 +35,14 @@ wSrbWord  := F_SRB(16#0000, 5, TRUE);
 dwSrbWord := F_DSRB(16#00000000, 5, TRUE);
 
 (* --- Value / index functions --- *)
-iLimit     := F_LIMIT(100, 150, 0);
-iScale     := F_SCALE(50, 0, 100, 0, 1000);
-iScaleNl   := F_SCALE_NL(2, 100, 50);  (* writes D100..D103 *)
+iLimit        := F_LIMIT(100, 150, 0);
+iScale        := F_SCALE(50, 0, 100, 0, 1000, FALSE);  (* clamped = 500 *)
+iScaleNoLimit := F_SCALE(150, 0, 100, 0, 1000, TRUE);  (* extrapolated = 1500 *)
+iScaleNl      := F_SCALE_NL(2, 100, 50);  (* writes D100..D103 *)
+
+(* DINT scaling: clamped and extrapolated *)
+diDScale        := F_DSCALE(150000, 0, 100000, 0, 1000000, FALSE);  (* clamped = 1000000 *)
+diDScaleNoLimit := F_DSCALE(150000, 0, 100000, 0, 1000000, TRUE);   (* extrapolated = 1500000 *)
 
 iIncrement := F_INCN(TRUE, 2, 5);
 iShift     := F_SHFT(2, 4, 5);

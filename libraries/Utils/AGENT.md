@@ -18,8 +18,8 @@ POU/
 ├── F_SRB.iecst / .csv              — Function: set/reset a bit in a WORD by xState
 ├── F_DSRB.iecst / .csv             — Function: set/reset a bit in a DWORD by xState
 ├── F_LIMIT.iecst / .csv            — Function: clamp an INT to [iMin..iMax]
-├── F_SCALE.iecst / .csv            — Function: linear scale an INT between two INT ranges
-├── F_DSCALE.iecst / .csv           — Function: linear scale a DINT between two DINT ranges
+├── F_SCALE.iecst / .csv            — Function: linear scale an INT between two INT ranges (clamped / unclamped)
+├── F_DSCALE.iecst / .csv           — Function: linear scale a DINT between two DINT ranges (clamped / unclamped)
 ├── F_SCALE_NL.iecst / .csv         — Function: non-linear scale through a D-register point table
 ├── F_INCN.iecst / .csv             — Function: increment an index 0..iMax with wrap
 ├── F_SHFT.iecst / .csv             — Function: shift an index within 0..iMax
@@ -57,8 +57,8 @@ POU/
 | POU | Returns | Purpose |
 |---|---|---|
 | `F_LIMIT` | INT | Clamp `iIn` to `[iMin..iMax]` |
-| `F_SCALE` | INT | Linear scale `iVal` from `iInLow..iInHigh` to `iOutLow..iOutHigh` |
-| `F_DSCALE` | DINT | Linear scale `diVal` from `diInLow..diInHigh` to `diOutLow..diOutHigh` |
+| `F_SCALE` | INT | Linear scale `iVal` from `iInLow..iInHigh` to `iOutLow..iOutHigh`; `xNoLimit = TRUE` disables clamping |
+| `F_DSCALE` | DINT | Linear scale `diVal` from `diInLow..diInHigh` to `diOutLow..diOutHigh`; `xNoLimit = TRUE` disables clamping |
 | `F_SCALE_NL` | INT | Non-linear scale `iPV` through a point table at `iDStart` |
 | `F_INCN` | INT | Increment `iCur` within `0..iMax` (wrap) when `xIn` |
 | `F_SHFT` | INT | Shift `iIdx` by `iShifter` within `0..iMax` |
@@ -111,14 +111,18 @@ Constants only — no device-bound variables.
 - `F_` = function, `FB_` = function block, `PRG_` = program. FB instances use CamelCase `fb` prefix (`fbHyst : FB_HYST`).
 - Variable names use Hungarian prefixes: `x` BOOL, `i` INT, `di` DINT, `w` WORD, `dw` DWORD, `r` REAL, `t` TIME, `fb` FB instance.
 - CSV files are UTF-16 LE + BOM, tab-separated, every cell quoted, LF line endings; `.iecst` files use CRLF. Comments in English.
-- Functions are called positionally (`result := F_SCALE(50, 0, 100, 0, 1000);`); FBs are called with named arguments (`fbHyst(xIn := …, iSV := …)`). `PRG_UTL_TEST` enforces this style.
+- Functions are called positionally (`result := F_SCALE(50, 0, 100, 0, 1000, FALSE);`); FBs are called with named arguments (`fbHyst(xIn := …, iSV := …)`). `PRG_UTL_TEST` enforces this style.
+- `F_SCALE` and `F_DSCALE` have six inputs: the five ranges plus the trailing `xNoLimit` flag. A new input parameter is always appended last, so the first five positional arguments keep their meaning; every call site must still pass the flag explicitly (`FALSE` = clamp as before). Callers inside the library: `F_WORK_LEFT`, `F_SCALE_NL`, `FB_SCALE_AI`, `L02_SCALE_AI` (for `F_SCALE`), `F_WORK_LEFT_TIME`, `F_VALVE_POS` (for `F_DSCALE`).
 - `F_MBMOV` and `L02_SET_IP` are "command" functions with no return assignment — they always return the default (`FALSE`). Call them for their device side effects, not for a result.
 - `F_FLT10` returns `REAL` (body is `INT_TO_REAL(iIn) / 10.0`) — set the return type to REAL in the GX Works 2 POU properties.
 - `F_SCALE_NL`, `L02_SET_IP`, `F_MBMOV`, `FB_SCALE_AI`, `L02_SCALE_AI`, `FB_VALVE_3P` use direct device / index-register access (`Z3`/`Z5`, `D0Z5`, `R0Z5`, `M0Z4`, `D8030Z3`, `R23500Z3`, `R23700Z3`, …). Do not rename those device references — they are not labels.
 - `FB_VALVE_3P` requires the **TimeControl** library (`TCO_DINT_50` ticker).
 - Return types are set in the GX Works 2 POU properties (not visible in the CSV). See the Public API table.
+- `F_SCALE` and `F_DSCALE` share the same body structure: degenerate-range guard with `RETURN`, `SEL`-based input clamp, `REAL` interpolation, `SEL`-based output clamp. Keep the two bodies in sync when editing one of them. Both compute in `REAL` (24-bit mantissa), so `F_DSCALE` results above `16777216` lose low-order digits.
 - **Known issue:** `L02_SET_IP` and `L02_SCALE_AI` are currently unprefixed in the working copy (should be `L02_SET_IP` / `L02_SCALE_AI`). Rename them back and update `PRG_UTL_TEST` accordingly.
 
 ## Test Program (PRG_UTL_TEST)
 
 `PRG_UTL_TEST` is a compile-and-run smoke test that calls every function and function block with representative inputs; results are stored in auto-assigned labels for the device monitor. Function calls use positional arguments, FB calls use named arguments. Manual inputs: `xSaveIp` (triggers `L02_SET_IP`), `xValveEnable` (enables `FB_VALVE_3P`). Device side effects: `L02_SET_IP` writes IP 192.168.0.100 to `R23807/R23808`, `F_MBMOV` copies `D100..D103` → `D200..D203`, `F_SCALE_NL` writes `D100..D103`.
+
+`F_SCALE` is exercised twice, to cover both modes: `iScale` (`xNoLimit = FALSE`, `50` → `500`) and `iScaleNoLimit` (`xNoLimit = TRUE`, `150` extrapolated → `1500`). The same holds for `F_DSCALE` with `diDScale` (`150000` clamped → `1000000`) and `diDScaleNoLimit` (`150000` extrapolated → `1500000`).

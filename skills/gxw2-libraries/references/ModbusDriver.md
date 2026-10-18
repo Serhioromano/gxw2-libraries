@@ -1,7 +1,5 @@
 # Modbus RTU Driver V7 — Library for Coolmay FX3G PLC
 
----
-
 ## Abstract
 
 The Modbus RTU Driver enables a Coolmay FX3G PLC to operate as a Modbus RTU master or slave on its two auxiliary RS485 ports (port 2 and port 3). On L02-series PLCs the same channel model also drives the built-in Ethernet port as a Modbus TCP master (client) — a channel whose `iPort` is `MB_PORT_TCP` is handled with the same scheduling logic as an RS485 channel. Communication channels are configured through an application-declared array `MB_CHANNELS` of type `MB_REG_50`; a single function block, `MB_PROCESS_50`, cycles through that array and performs the channel transfers on a **50 ms** tick.

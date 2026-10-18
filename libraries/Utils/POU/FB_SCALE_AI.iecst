@@ -11,15 +11,18 @@ xErrLimit := FALSE;
 xErrWire := FALSE;
 xErrMinMax := FALSE;
 
-xIstemperature := (
+xIsRTD := (
+	iSType = STYPE_PT100 OR
+	iSType = STYPE_PT1000 OR
+	iSType = STYPE_NTC
+);
+
+xIsTC := (
 	iSType = STYPE_TC_T OR
 	iSType = STYPE_TC_S OR
 	iSType = STYPE_TC_E OR
 	iSType = STYPE_TC_J OR
-	iSType = STYPE_TC_K OR
-	iSType = STYPE_PT100 OR
-	iSType = STYPE_PT1000 OR
-	iSType = STYPE_NTC
+	iSType = STYPE_TC_K
 );
 
 xIsScalable := (
@@ -31,8 +34,10 @@ xIsScalable := (
 
 (* Detect wire break, bad limits and min=max on scalable types *)
 SET(iTemp = 32760 AND xIsScalable, xErrWire);
-SET(iTemp = -1990 AND xIstemperature, xErrWire);
-SET((iMin >= iMax) AND xIsScalable, xErrLimit);
+SET(iTemp = -1990 AND xIsRTD, xErrWire);
+SET(iTemp = 13700 AND xIsTC, xErrWire);
+
+SET(xIsScalable AND (iMin >= iMax) AND xIsScalable, xErrLimit);
 SET((xIsScalable AND iMin = iMax AND iMin = 0), xErrMinMax);
 
 (* Output scaled value, 0 on error *)
@@ -41,7 +46,7 @@ iValueOut := SEL(
 	SEL(
 		xIsScalable,
 		iTemp,
-		F_SCALE(iTemp, 0, 4092, iMin, iMax)
+		F_SCALE(iTemp, 0, 4092, iMin, iMax, FALSE)
 	) + iCorrection,
 	0
 );

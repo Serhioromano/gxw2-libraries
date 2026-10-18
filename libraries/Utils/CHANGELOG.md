@@ -1,5 +1,19 @@
 # Changelog
 
+## V6 — 2026-08-21
+
+- **`F_SCALE`:** added a sixth input `xNoLimit` (BOOL). `FALSE` — the input and the result are clamped to their ranges (previous behaviour); `TRUE` — no clamping at all, values outside the ranges are extrapolated linearly. The parameter is appended after `iOutHigh`, so the meaning of the first five positional arguments is unchanged.
+- **`F_SCALE`:** added a guard for a degenerate input range (`iInHigh = iInLow`). Previously the scale factor divided by zero and raised a PLC operation error; the function now returns `iOutLow`.
+- **`F_SCALE.iecst` / `F_SCALE.csv`:** documented both modes in the header comment; the CSV entry for `xNoLimit` was declared as `INT` (and spelled `xNolimit`) while the body used it as a `BOOL` selector — corrected to `BOOL` / `xNoLimit`; removed the unused `rTemp` local.
+- **Call sites:** every caller now passes the new flag explicitly — `F_WORK_LEFT`, `F_SCALE_NL`, `FB_SCALE_AI`, `L02_SCALE_AI` pass `FALSE` (unchanged behaviour); `PRG_UTL_TEST` gained a second call with `xNoLimit = TRUE` (`iScaleNoLimit`, `150` extrapolated to `1500`).
+- **`F_DSCALE`:** rebuilt to the same structure as `F_SCALE`. Added the sixth input `xNoLimit` (BOOL) with the same meaning; added the degenerate-range guard (previously returned the output low limit through the clamp expression); the input and output clamps now use the correct `LIMITATION(MN, IN, MX)` order for both ascending and descending ranges; the scale factor is computed from `DINT_TO_REAL` conversions of each limit instead of a `DINT` subtraction, so large ranges no longer wrap; the unused `rTemp` local was replaced by `rNumber` and `diValue`.
+- **Call sites:** `F_WORK_LEFT_TIME` and `F_VALVE_POS` pass the new `F_DSCALE` flag explicitly (`FALSE`, unchanged behaviour); `PRG_UTL_TEST` gained two `F_DSCALE` calls (`diDScale` clamped, `diDScaleNoLimit` extrapolated), so the smoke test now covers both scaling functions in both modes.
+- **`F_SCALE`:** degenerate-range guard now exits with `RETURN` instead of wrapping the body in `ELSE`.
+- **Documentation:** rewrote the `F_DSCALE` section of `Utils.md` (parameter table with `xNoLimit`, clamping versus extrapolation, descending ranges, degenerate input range, `REAL` 24-bit mantissa limitation, `DINT` overflow warning) and updated the scaling overview, summary tables and `AGENT.md`.
+- **Verification:** both scaling functions were desk-tested against an independent reference model — 20 hand-checked `DINT` cases plus 200 000 randomised realistic-range combinations with no deviation, and `xNoLimit = FALSE` reproduces the previous `F_DSCALE` results within one count (the previous version also mishandled descending ranges).
+- **Documentation:** rewrote the `F_SCALE` section of `Utils.md` (parameter table with `xNoLimit`, clamping versus extrapolation, truncation, descending ranges, degenerate input range, `INT` overflow warning) and updated the summary tables and `AGENT.md`.
+- **Verification:** the algorithm was desk-tested against an independent reference model — 24 hand-checked cases plus 300 000 randomised range/value combinations; `xNoLimit = FALSE` reproduces the V5 results exactly.
+
 ## V5 — 2026-08-20
 
 - **Documentation:** Rewrote `Utils.md` to follow the library documentation structure (title, abstract, prerequisites, terminology, architectural description, summary table, per-POU detail sections, conceptual sections).

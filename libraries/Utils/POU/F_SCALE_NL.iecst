@@ -9,7 +9,7 @@ FOR iCount := 1 TO iPN DO
 		Z6 := Z5 + 1;
 		Z4 := Z5 + iPN;
 		Z7 := Z6 + iPN;
-		F_SCALE_NL := F_SCALE(iPV, D0Z5, D0Z6, D0Z4, D0Z7);
+		F_SCALE_NL := F_SCALE(iPV, D0Z5, D0Z6, D0Z4, D0Z7, FALSE);
 		EXIT;
 	END_IF;
 END_FOR;

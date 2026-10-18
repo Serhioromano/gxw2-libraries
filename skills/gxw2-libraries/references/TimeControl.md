@@ -1,7 +1,5 @@
 # TimeControl V3 — Library for Coolmay FX3G PLC
 
----
-
 ## Abstract
 
 TimeControl provides ticker-based time measurement for Mitsubishi FX series PLCs in GX Works 2. It replaces the CoDeSys `TIME()` function with two interrupt-driven global tickers (`TCO_DINT_50` and `TCO_DINT_10`) and a set of conversion functions, an elapsed-time difference function, and a blink function block.
