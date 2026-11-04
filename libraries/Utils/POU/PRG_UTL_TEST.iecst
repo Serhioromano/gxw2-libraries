@@ -60,7 +60,7 @@ rFlt10 := F_FLT10(123);
 
 (* --- Setup / command functions (device side effects) --- *)
 (* Writes IP 192.168.0.100 to R23807/R23808 while xSaveIp is TRUE *)
-xSetIp := L02_SET_IP(xSaveIp, IP_PLC_IP, 16#00C0, 16#00A8, 16#0000, 16#0064);
+xSetIp := L02_SET_IP(xSaveIp, IP_PLC_IP, 192, 168, 0, 100);
 
 (* Copies 4 words D100..D103 to D200..D203 every scan *)
 xMbmov := F_MBMOV(TRUE, 100, 4, 200);

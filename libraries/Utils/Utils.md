@@ -495,11 +495,11 @@ rResult := F_FLT10(123);   (* 12.3 *)
 
 ### `L02_SET_IP`
 
-Writes an L02 PLC IP setting (PLC IP, gateway, mask, or remote EIP coupler) into the corresponding R register on the rising edge of `xInit`, and sets `M8197` so the PLC applies the new addresses and restarts the interface. `M8197` resets itself inside the PLC, so neither the application nor the function clears it.
+Writes an L02 PLC IP setting (PLC IP, gateway, mask, or remote EIP coupler) into the corresponding R register while `xInit` is `TRUE`, and sets `M8197` so the PLC applies the new addresses and restarts the interface. `M8197` resets itself inside the PLC, so neither the application nor the function clears it.
 
 | Variable | Scope | Type | Description |
 |----------|-------|------|-------------|
-| `xInit` | INPUT | BOOL | Trigger. The setting is written on the rising edge of this input only |
+| `xInit` | INPUT | BOOL | Trigger. The setting is written while this input is `TRUE` |
 | `iWts` | INPUT | INT | Setting type — one of the `IP_*` constants |
 | `wIp1` | INPUT | WORD | IP octet 1 |
 | `wIp2` | INPUT | WORD | IP octet 2 |
@@ -519,18 +519,17 @@ Setting types:
 (* M8002 = first scan, xSaveIp = HMI "save" pulse. *)
 xApplyIp := M8002 OR MEP(xSaveIp);
 
-(* One setting per call: use IP_PLC_GATEWAY, IP_PLC_MASK, IP_REMOTE1 … IP_REMOTE4
-   with their own trigger pulse. *)
-xDone := L02_SET_IP(xApplyIp, IP_PLC_IP, 16#00C0, 16#00A8, 16#0000, 16#0064);
+(* All settings of one configuration share the same one-scan trigger. *)
+xDone := L02_SET_IP(xApplyIp, IP_PLC_IP, 192, 168, 1, 100);
+xDone := L02_SET_IP(xApplyIp, IP_PLC_GATEWAY, 192, 168, 1, 1);
+xDone := L02_SET_IP(xApplyIp, IP_PLC_MASK, 255, 255, 255, 0);
 ```
 
 > **Note:** `L02_SET_IP` performs no return assignment, so its result is always the default (`FALSE`). It is used for its device side effect (writing the R registers).
 
-> **Trigger (`xInit`):** the function acts on the rising edge of `xInit`, so pass a bit that is `FALSE` in normal scans (`M8002` for the startup write, an HMI "save" pulse for a later change) and call the function every scan.
+> **Applying the addresses:** every write ends with `M8197 := TRUE`, which makes the PLC apply the addresses and restart the interface. `M8197` clears itself, so no application code is needed — do not write `M8197` in the user program.
 
-> **Applying the addresses:** each write ends with `M8197 := TRUE`, which makes the PLC apply the addresses and restart the interface. `M8197` clears itself, so no application code is needed — do not write `M8197` in the user program.
-
-> **One setting per rising edge:** all `L02_SET_IP` calls share one edge detector, so a scan executes only the **first** call after the rising edge; further calls with the same trigger are skipped. When several settings have to be written (IP address, mask, gateway), write one setting per scan — sequence the calls — so that the last write applies the complete address set.
+> **Trigger (`xInit`):** the setting is written while this input is `TRUE`, so pass a bit that is `TRUE` for **one scan only** (`M8002` for the startup write, `MEP` of an HMI "save" pulse for a later change) and never tie `xInit` to `TRUE` — the interface would be restarted on every scan. Several settings may be written in the same scan with the same trigger; the last write applies them all.
 
 ### `F_MBMOV`
 

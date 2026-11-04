@@ -1,0 +1,38 @@
+(*
+  MB_MASTER_INIT_TCP - configure the L02 built-in Ethernet port as a
+  Modbus TCP master (client).
+
+  While xInit is TRUE:
+    R23812 := iTcpPort  Modbus TCP port (0 keeps the current port, 502)
+    D8325  := iServers  number of remote servers (clamped to 1..4)
+    D8395  := 4         Modbus TCP master (client)
+
+  The body is level-triggered on purpose - pass a one-scan pulse as
+  xInit, e.g. M0 := MB_MASTER_INIT_TCP(MEP(xApplyIp), 502, 1);
+  Never tie xInit to TRUE.
+
+  The IP addresses - PLC address, mask, gateway and the remote servers -
+  are written with L02_SET_IP (Utils library). That function sets M8197,
+  which applies R23812/D8325/D8395 together with the addresses and
+  restarts the interface, so call MB_MASTER_INIT_TCP before the
+  L02_SET_IP writes of the same scan.
+
+  Do not write D8395, D8325 or R23812 from the application when this
+  function is used.
+*)
+IF xInit THEN
+	IF iTcpPort > 0 THEN
+		R23812 := iTcpPort; (* Modbus TCP port *)
+	END_IF;
+
+	IF iServers < 1 THEN
+		D8325 := 1; (* at least one remote server *)
+	ELSIF iServers > 4 THEN
+		D8325 := 4; (* at most four remote servers *)
+	ELSE
+		D8325 := iServers;
+	END_IF;
+
+	D8395 := 4; (* Modbus TCP master (client) *)
+END_IF;
+MB_MASTER_INIT_TCP := xInit;
