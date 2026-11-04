@@ -1,5 +1,13 @@
 # Changelog
 
+## V8 — 2026-11-04
+
+- **Changed (`L02_SET_IP.iecst`):** The function now applies the IP settings itself and writes only on an edge. `IF xInit THEN` became `IF MEP(xInit) THEN` and the `ELSE` branch was removed: on a rising edge of `xInit` the R-register pair is written and `M8197` is set, which applies the new addresses and restarts the L02 interface. `M8197` is self-resetting in the PLC, so neither the function nor the application ever clears it. Callers no longer need the separate `M8197 := M8002 OR MEP(xSaveIp);` line.
+- **Usage requirement:** pass a trigger bit that is `FALSE` in normal scans (`M8002`, an HMI pulse such as `xApplyIp := M8002 OR MEP(xSaveIp);`) as `xInit` and keep the call in a POU that runs every scan. Do not tie `xInit` to `TRUE` — no edge is ever produced and only the call of the very first scan writes. Because all calls share the single `MEP` edge detector, a scan executes only the first `L02_SET_IP` call after the rising edge: write one setting per rising edge. The existing `PRG_UTL_TEST` call pattern (`xSaveIp` manual bit, one setting) already satisfies this.
+- **Documentation (`Utils.md`):** Rewrote the `L02_SET_IP` section — edge-triggered `xInit`, the self-resetting `M8197` apply, the one-setting-per-rising-edge rule, and the example reduced to a single setting with its trigger (`xSaveIp` / `xApplyIp`); updated the summary table entry.
+- **Documentation (`AGENT.md`):** Recorded that `L02_SET_IP` sets the self-resetting `M8197` and documented the `PRG_UTL_TEST` side effect.
+- **Build:** Regenerate `Utils.sul` in GX Works 2 and regenerate `Utils.pdf` from `Utils.md` to propagate the change into the compiled library and documentation PDF.
+
 ## V7 — 2026-08-22
 
 - **Added:** `F_NEG` — negates an `INT` by multiplying it by `-1`; input `iIn`, returns `INT`. `F_NEG(-32768)` returns `-32768` because that value has no positive counterpart.

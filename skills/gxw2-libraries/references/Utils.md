@@ -1,4 +1,4 @@
-# Utils V7 — Library for Coolmay FX3G PLC
+# Utils V8 — Library for Coolmay FX3G PLC
 
 Utils is a library of general-purpose functions and function blocks for Mitsubishi FX3G PLCs programmed in GX Works 2. It provides bit-level WORD/DWORD manipulation, linear and non-linear scaling, sign negation, on/off hysteresis regulators, index rotation and shifting, progress calculation, a 3-position valve controller, analog-input scaling for the host PLC and L02 modules, and L02 IP configuration.
 
@@ -63,7 +63,7 @@ Scaling is provided in three forms: linear 16-bit (`F_SCALE`), linear 32-bit (`F
 | `F_WORK_LEFT_TIME` | Function | Progress 100..0 from elapsed/total (TIME) |
 | `F_VALVE_POS` | Function | Valve position 0..1000 from elapsed/total TIME |
 | `F_FLT10` | Function | Divide an INT by 10, returning REAL |
-| `L02_SET_IP` | Function | Write L02 IP settings to R registers |
+| `L02_SET_IP` | Function | Write L02 IP settings to R registers and apply them |
 | `F_MBMOV` | Function | Block-move N words between devices |
 | `FB_HYST` | Function Block | Heating on/off regulator with hysteresis |
 | `FB_HYST_COOL` | Function Block | Cooling on/off regulator with hysteresis |
@@ -495,11 +495,11 @@ rResult := F_FLT10(123);   (* 12.3 *)
 
 ### `L02_SET_IP`
 
-Writes an L02 PLC IP setting (PLC IP, gateway, mask, or remote EIP coupler) into the corresponding R register while `xInit` is `TRUE`.
+Writes an L02 PLC IP setting (PLC IP, gateway, mask, or remote EIP coupler) into the corresponding R register on the rising edge of `xInit`, and sets `M8197` so the PLC applies the new addresses and restarts the interface. `M8197` resets itself inside the PLC, so neither the application nor the function clears it.
 
 | Variable | Scope | Type | Description |
 |----------|-------|------|-------------|
-| `xInit` | INPUT | BOOL | Trigger to write the setting |
+| `xInit` | INPUT | BOOL | Trigger. The setting is written on the rising edge of this input only |
 | `iWts` | INPUT | INT | Setting type — one of the `IP_*` constants |
 | `wIp1` | INPUT | WORD | IP octet 1 |
 | `wIp2` | INPUT | WORD | IP octet 2 |
@@ -516,12 +516,21 @@ Setting types:
 **Example:**
 
 ```iecst
-xDone := L02_SET_IP(xSaveSettings, IP_PLC_IP, 16#00C0, 16#00A8, 16#0000, 16#0064);
-xDone := L02_SET_IP(xSaveSettings, IP_PLC_GATEWAY, 16#00C0, 16#00A8, 16#0000, 16#0001);
-xDone := L02_SET_IP(xSaveSettings, IP_PLC_MASK, 16#00FF, 16#00FF, 16#00FF, 16#0000);
+(* M8002 = first scan, xSaveIp = HMI "save" pulse. *)
+xApplyIp := M8002 OR MEP(xSaveIp);
+
+(* One setting per call: use IP_PLC_GATEWAY, IP_PLC_MASK, IP_REMOTE1 … IP_REMOTE4
+   with their own trigger pulse. *)
+xDone := L02_SET_IP(xApplyIp, IP_PLC_IP, 16#00C0, 16#00A8, 16#0000, 16#0064);
 ```
 
 > **Note:** `L02_SET_IP` performs no return assignment, so its result is always the default (`FALSE`). It is used for its device side effect (writing the R registers).
+
+> **Trigger (`xInit`):** the function acts on the rising edge of `xInit`, so pass a bit that is `FALSE` in normal scans (`M8002` for the startup write, an HMI "save" pulse for a later change) and call the function every scan.
+
+> **Applying the addresses:** each write ends with `M8197 := TRUE`, which makes the PLC apply the addresses and restart the interface. `M8197` clears itself, so no application code is needed — do not write `M8197` in the user program.
+
+> **One setting per rising edge:** all `L02_SET_IP` calls share one edge detector, so a scan executes only the **first** call after the rising edge; further calls with the same trigger are skipped. When several settings have to be written (IP address, mask, gateway), write one setting per scan — sequence the calls — so that the last write applies the complete address set.
 
 ### `F_MBMOV`
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## V18 — 2026-11-04
+
+- **Added (`MB_SLAVE_INIT_TCP.iecst` / `.csv`):** New function that switches the L02 built-in Ethernet port into Modbus TCP slave (server) mode. Inputs: `xInit` (BOOL, enables the mode on the rising edge) and `iTcpPort` (INT, written to `R23812` when non-zero; `0` keeps the current port, `502` after power-up). The body sets `D8395 := 3` — Modbus TCP server — and returns `TRUE`. No `MB_CHANNELS` entry and no `MB_PROCESS_50` call are needed in this role. IP addresses are still written with `L02_SET_IP`, which sets the self-resetting `M8197` and thereby applies the `R23812` value written by the new function.
+- **Test program (`PRG_MB_TEST.iecst`):** Now also calls `MB_SLAVE_INIT_TCP(M8013, 502)` so a compile exercises the new function.
+- **Documentation (`Modbus.md`):** Documented `MB_SLAVE_INIT_TCP` (parameter table, server example, role exclusivity note) in the Modbus TCP chapter, added it to the POU summary table, the abstract and the workflow, and rewrote the `M8197` handling: the application no longer pulses `M8197` — `L02_SET_IP` does it, so the examples pass an `xApplyIp` trigger (`M8002 OR MEP(xSaveIp)`) into `xInit` and write one setting per pulse.
+- **Documentation (`AGENT.md`):** Added the new POU to the file structure and the public API table; updated the Modbus TCP developer note with `MB_SLAVE_INIT_TCP`, its edge-triggered behaviour and the `M8197` ownership; updated the `PRG_MB_TEST` description.
+- **Changed (`L02_SET_IP.iecst`, Utils V8):** the function now also sets `M8197` (self-resetting) on every write and acts on the rising edge of `xInit` only — pulse `xSaveIp` once per setting instead of tying `xInit` to `TRUE`.
+- **Build:** Regenerate `Modbus.sul` in GX Works 2 and regenerate `Modbus.pdf` from `Modbus.md` to propagate the change into the compiled library and documentation PDF.
+
 ## V17 — 2026-10-01
 
 - **Documentation (`Modbus.md`):** Added a **Modbus TCP (Ethernet)** chapter covering the L02 built-in Ethernet port: mandatory `iPort := MB_PORT_TCP`, network setup devices (`D8395`, `D8325`, `R23812`, `M8197`, `M8193`, `M8395`, `M8062`, `M8063`, `R23815`/`R23816`), IP configuration through `Utils` `L02_SET_IP` / the `IP_*` constants, `iDev` as the remote server index (`1`–`4` ↔ `IP_REMOTE1`–`IP_REMOTE4`), TCP timeout guidance, a complete Modbus TCP master example and the Modbus TCP server mode. The chapter is placed at the end of the document, next to the main example.

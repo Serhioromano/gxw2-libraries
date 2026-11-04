@@ -1,5 +1,19 @@
-(* Write L02 IP settings (xInit, iWts, wIp1..wIp4). Returns BOOL. *)
-IF xInit THEN
+(*
+  L02_SET_IP - write one L02 IP setting (xInit, iWts, wIp1..wIp4).
+  Returns BOOL.
+
+  The setting is written on the rising edge of xInit only: the four octets
+  are packed into the two R registers of the setting selected by iWts
+  (IP_* constant) and M8197 is then set, so the PLC applies the new
+  addresses and restarts the interface. M8197 resets itself - neither this
+  function nor the application ever clears it.
+
+  Pass a trigger bit that is FALSE in normal scans (M8002 first scan or an
+  HMI "save" pulse) as xInit and call the function every scan. All calls
+  share the same edge detector, so only one setting is written per rising
+  edge - sequence several settings over consecutive scans.
+*)
+IF MEP(xInit) THEN
 	Z5 := iWts;
 	R0Z5 := 0;
 	wTmp := wIp1;
@@ -11,4 +25,6 @@ IF xInit THEN
 	wTmp := wIp3;
 	ROL(TRUE, 8, wTmp);
 	R0Z5 := wTmp OR wIp4;
+
+	M8197 := TRUE; (* Apply the written addresses and restart the interface *)
 END_IF;

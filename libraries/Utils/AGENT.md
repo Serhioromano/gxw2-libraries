@@ -29,7 +29,7 @@ POU/
 ├── F_WORK_LEFT_TIME.iecst / .csv   — Function: progress 100..0 from elapsed/total (TIME)
 ├── F_VALVE_POS.iecst / .csv        — Function: valve position % from elapsed/total TIME
 ├── F_FLT10.iecst / .csv            — Function: divide an INT by 10 (returns REAL)
-├── L02_SET_IP.iecst / .csv       — Function: write L02 IP settings (returns BOOL)
+├── L02_SET_IP.iecst / .csv       — Function: write one L02 IP setting on the rising edge of xInit and set M8197 (returns BOOL)
 ├── F_MBMOV.iecst / .csv            — Function: block-move N words between devices (returns BOOL)
 ├── FB_HYST.iecst / .csv            — Function Block: heating on/off regulator with hysteresis
 ├── FB_HYST_COOL.iecst / .csv       — Function Block: cooling on/off regulator with hysteresis
@@ -80,7 +80,7 @@ POU/
 | POU | Returns | Purpose |
 |---|---|---|
 | `F_FLT10` | REAL | Divide `iIn` by 10 |
-| `L02_SET_IP` | BOOL | Write L02 IP settings (`iWts` = `IP_*` constant, octets `wIp1..wIp4`) |
+| `L02_SET_IP` | BOOL | Write one L02 IP setting (`iWts` = `IP_*` constant, octets `wIp1..wIp4`) on the rising edge of `xInit` and set `M8197` so it is applied |
 | `F_MBMOV` | BOOL | Move `iNum` words from device `iSrc` to device `iDst` |
 
 ### Function blocks
@@ -118,6 +118,7 @@ Constants only — no device-bound variables.
 - Functions are called positionally (`result := F_SCALE(50, 0, 100, 0, 1000, FALSE);`); FBs are called with named arguments (`fbHyst(xIn := …, iSV := …)`). `PRG_UTL_TEST` enforces this style.
 - `F_SCALE` and `F_DSCALE` have six inputs: the five ranges plus the trailing `xNoLimit` flag. A new input parameter is always appended last, so the first five positional arguments keep their meaning; every call site must still pass the flag explicitly (`FALSE` = clamp as before). Callers inside the library: `F_WORK_LEFT`, `F_SCALE_NL`, `FB_SCALE_AI`, `L02_SCALE_AI` (for `F_SCALE`), `F_WORK_LEFT_TIME`, `F_VALVE_POS` (for `F_DSCALE`).
 - `F_MBMOV` and `L02_SET_IP` are "command" functions with no return assignment — they always return the default (`FALSE`). Call them for their device side effects, not for a result.
+- `L02_SET_IP` owns `M8197`: on the rising edge of `xInit` (`IF MEP(xInit) THEN`) it writes the R-register pair and sets `M8197` (apply + interface restart). `M8197` is self-resetting in the PLC, so there is no `ELSE` branch and nobody — neither the function nor the application — ever clears it. Applications must pass a trigger bit that is `FALSE` in normal scans (`M8002`, an HMI pulse) as `xInit` and must not write `M8197` themselves. Tying `xInit` to `TRUE` produces no edge, so only the call made on the very first scan writes. Because `MEP` keeps one edge detector per instruction and a function body exists once, all `L02_SET_IP` calls share it: a scan executes only the *first* call after the rising edge, i.e. **one setting per rising edge**. Documented usage is therefore one setting per pulse; writing IP, mask, gateway and remote servers in a single scan would require a level-triggered body (`IF xInit THEN`), which is not what the source does today.
 - `F_FLT10` returns `REAL` (body is `INT_TO_REAL(iIn) / 10.0`) — set the return type to REAL in the GX Works 2 POU properties. `F_NEG` returns `INT` and `F_DNEG` returns `DINT`; both are set the same way.
 - `F_NEG` / `F_DNEG` negate by multiplication with `-1`, so the most negative value of the type (`-32768` / `-2147483648`) has no positive counterpart and is returned unchanged. `F_DNEG` tolerates a DINT multiplied by an `INT` literal, as `FB_VALVE_3P` already does (`DWORD_TO_DINT(dwTemp) * 50`).
 - `F_SCALE_NL`, `L02_SET_IP`, `F_MBMOV`, `FB_SCALE_AI`, `L02_SCALE_AI`, `FB_VALVE_3P` use direct device / index-register access (`Z3`/`Z5`, `D0Z5`, `R0Z5`, `M0Z4`, `D8030Z3`, `R23500Z3`, `R23700Z3`, …). Do not rename those device references — they are not labels.
@@ -128,6 +129,6 @@ Constants only — no device-bound variables.
 
 ## Test Program (PRG_UTL_TEST)
 
-`PRG_UTL_TEST` is a compile-and-run smoke test that calls every function and function block with representative inputs; results are stored in auto-assigned labels for the device monitor. Function calls use positional arguments, FB calls use named arguments. Manual inputs: `xSaveIp` (triggers `L02_SET_IP`), `xValveEnable` (enables `FB_VALVE_3P`). Device side effects: `L02_SET_IP` writes IP 192.168.0.100 to `R23807/R23808`, `F_MBMOV` copies `D100..D103` → `D200..D203`, `F_SCALE_NL` writes `D100..D103`.
+`PRG_UTL_TEST` is a compile-and-run smoke test that calls every function and function block with representative inputs; results are stored in auto-assigned labels for the device monitor. Function calls use positional arguments, FB calls use named arguments. Manual inputs: `xSaveIp` (triggers `L02_SET_IP`), `xValveEnable` (enables `FB_VALVE_3P`). Device side effects: on the rising edge of `xSaveIp`, `L02_SET_IP` writes IP 192.168.0.100 to `R23807/R23808` and sets the self-resetting `M8197`, `F_MBMOV` copies `D100..D103` → `D200..D203`, `F_SCALE_NL` writes `D100..D103`.
 
 `F_SCALE` is exercised twice, to cover both modes: `iScale` (`xNoLimit = FALSE`, `50` → `500`) and `iScaleNoLimit` (`xNoLimit = TRUE`, `150` extrapolated → `1500`). The same holds for `F_DSCALE` with `diDScale` (`150000` clamped → `1000000`) and `diDScaleNoLimit` (`150000` extrapolated → `1500000`).

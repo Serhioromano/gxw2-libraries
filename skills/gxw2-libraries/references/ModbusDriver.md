@@ -2,7 +2,7 @@
 
 ## Abstract
 
-The Modbus RTU Driver enables a Coolmay FX3G PLC to operate as a Modbus RTU master or slave on its two auxiliary RS485 ports (port 2 and port 3). On L02-series PLCs the same channel model also drives the built-in Ethernet port as a Modbus TCP master (client) — a channel whose `iPort` is `MB_PORT_TCP` is handled with the same scheduling logic as an RS485 channel. Communication channels are configured through an application-declared array `MB_CHANNELS` of type `MB_REG_50`; a single function block, `MB_PROCESS_50`, cycles through that array and performs the channel transfers on a **50 ms** tick.
+The Modbus RTU Driver enables a Coolmay FX3G PLC to operate as a Modbus RTU master or slave on its two auxiliary RS485 ports (port 2 and port 3). On L02-series PLCs the same channel model also drives the built-in Ethernet port as a Modbus TCP master (client) — a channel whose `iPort` is `MB_PORT_TCP` is handled with the same scheduling logic as an RS485 channel — and `MB_SLAVE_INIT_TCP` switches that port into Modbus TCP slave (server) mode. Communication channels are configured through an application-declared array `MB_CHANNELS` of type `MB_REG_50`; a single function block, `MB_PROCESS_50`, cycles through that array and performs the channel transfers on a **50 ms** tick.
 
 The `MB_CHANNELS` array and the `c_MB_CHANNELS_NUM` capacity constant are declared by the application in its own global label list, sized to the number of channels it actually uses; `MB_PROCESS_50` cycles through exactly that many channels. This keeps the automatically-assigned device usage proportional to the number of channels actually configured.
 
@@ -59,7 +59,7 @@ Coolmay PLC/HMI integrated units are equipped with two RS485 ports: port 2 is ex
 The recommended workflow is:
 
 1. At startup (under the `M8002` initialisation pulse), configure the `MB_CHANNELS` array.
-2. Initialise each RS485 port that is used with `MB_PORT_SETTINGS` and the relevant `MB_*_INIT_*` function. Re-trigger the initialisation periodically after startup (see the timing note in § Modbus Master). For a `MB_PORT_TCP` channel the Ethernet port is configured instead, as described in § Modbus TCP (Ethernet).
+2. Initialise each RS485 port that is used with `MB_PORT_SETTINGS` and the relevant `MB_*_INIT_*` function. Re-trigger the initialisation periodically after startup (see the timing note in § Modbus Master). For a `MB_PORT_TCP` channel the Ethernet port is configured instead, as described in § Modbus TCP (Ethernet). To make the PLC a Modbus TCP server, call `MB_SLAVE_INIT_TCP` — that role needs no channel and no `MB_PROCESS_50` call.
 3. Call `fbMbProcess` every scan (or at least faster than the shortest `tCycle`).
 
 > **Calling convention:** the port-initialisation and settings POUs are *functions* that return their result through the function name. In GX Works 2 a function call used as a statement requires a left-hand side, so callers assign the result to a dummy bit, e.g. `M0 := MB_MASTER_INIT_PORT2(TRUE, PortSettings);`. The result value is not used elsewhere.
@@ -75,6 +75,7 @@ The recommended workflow is:
 | `MB_MASTER_INIT_PORT3` | Function | Initialise the Modbus master on port 3. |
 | `MB_SLAVE_INIT_PORT2` | Function | Initialise the Modbus slave on port 2. |
 | `MB_SLAVE_INIT_PORT3` | Function | Initialise the Modbus slave on port 3. |
+| `MB_SLAVE_INIT_TCP` | Function | Enable Modbus TCP slave (server) mode on the L02 Ethernet port. |
 | `MTB_SLAVE_PORT2` | Function | Reconfigure port 2 for the Mitsubishi protocol. |
 | `MTB_SLAVE_PORT3` | Function | Reconfigure port 3 for the Mitsubishi protocol. |
 | `MB_PROCESS_50` | Function Block | Cycle through the channels and perform their read/write transfers. |
@@ -182,6 +183,8 @@ M0 := MB_SLAVE_INIT_PORT2(M8013, 1, PortSettings);
 ```
 
 No further configuration is necessary for the PLC to function as a slave on port 2. The same pattern applies to port 3. The variable `M0` is not referenced elsewhere in the program — it exists solely to satisfy the syntactic requirement that a function call used as a statement must have a left-hand side assignment.
+
+> **Modbus TCP slave:** on an L02-series PLC the Ethernet port can serve as a Modbus TCP slave (server) as well — use `MB_SLAVE_INIT_TCP` instead, see § Modbus TCP (Ethernet) → § PLC as a Modbus TCP Server.
 
 ---
 
@@ -506,7 +509,7 @@ RS485 channels and TCP channels can be mixed in the same `MB_CHANNELS` array.
 | `D8395` | `4` | Modbus TCP master (client). `3` selects Modbus TCP server (see below). |
 | `D8325` | `1`–`4` | Number of remote servers polled by this PLC. |
 | `R23812` | `502` | Modbus TCP port. |
-| `M8197` | — | Pulse to apply the IP addresses and restart the interface. |
+| `M8197` | — | Apply the IP addresses and restart the interface. Set by `L02_SET_IP` on every write; the PLC resets it — no application code needed. |
 | `M8193` | — | Network ready (`1` when the network is up). |
 | `M8395` | — | Connection status: `1` = communication normal, `0` = abnormal. |
 | `M8062` | — | Modbus timeout. |
@@ -522,7 +525,9 @@ IP addresses are written with `L02_SET_IP` from the `Utils` library (see the Uti
 | `IP_PLC_GATEWAY` | Gateway |
 | `IP_REMOTE1` … `IP_REMOTE4` | Remote server 1 … 4 |
 
-The IP writes must precede the `M8197` pulse in the same scan. `M8002` applies them once at startup; pulse `M8197` again (for example from the HMI) to apply changed addresses.
+`L02_SET_IP` sets `M8197` itself on every write and the PLC clears it again, so the application never writes `M8197` and needs no separate "apply" pulse. The function writes **one setting per rising edge** of its `xInit` input: pass a bit that is `FALSE` in normal scans (`M8002` for the startup write, an HMI "save" pulse for a later change) and keep the call in a POU that runs every scan.
+
+> **One setting per rising edge:** the edge is evaluated inside the function, so a scan executes only the first `L02_SET_IP` call after the rising edge — further calls with the same trigger are skipped. Write the IP address, mask, gateway and remote servers one per scan, each with its own pulse, and apply the next write only after the previous one has been executed.
 
 ### Remote Servers and `iDev`
 
@@ -540,6 +545,7 @@ Declare the function-block instance and the status labels in the local label sec
 VAR
     fbMbProcess    : MB_PROCESS_50;
     xSaveIp        : BOOL; (* pulse to re-apply the IP addresses   *)
+    xApplyIp       : BOOL; (* apply trigger passed to L02_SET_IP   *)
     xNetworkReady  : BOOL;
     xConnection    : BOOL;
     xModbusTimeout : BOOL;
@@ -553,16 +559,15 @@ In the POU body, configure the Ethernet port, the channel and the scheduler:
 
 ```iecst
 (* --- Ethernet setup of the L02 built-in port ---------------------- *)
-M0 := L02_SET_IP(TRUE, IP_PLC_IP, 192, 168, 1, 3);      (* PLC IP       *)
-M0 := L02_SET_IP(TRUE, IP_PLC_MASK, 255, 255, 255, 0);  (* subnet mask  *)
-M0 := L02_SET_IP(TRUE, IP_PLC_GATEWAY, 192, 168, 1, 1); (* gateway      *)
-M0 := L02_SET_IP(TRUE, IP_REMOTE1, 192, 168, 1, 5);     (* remote 1     *)
+(* The function writes one setting per rising edge of xInit: pulse    *)
+(* xSaveIp once per setting, one scan apart.                          *)
+xApplyIp := M8002 OR MEP(xSaveIp);
 
-R23812 := 502;                                          (* TCP port     *)
+M0 := L02_SET_IP(xApplyIp, IP_PLC_IP, 192, 168, 1, 3);      (* PLC IP       *)
+(* Repeat with IP_PLC_MASK, IP_PLC_GATEWAY and IP_REMOTE1, each with *)
+(* its own pulse.                                                    *)
 
-(* Apply the IP addresses: first scan, and again after a change.      *)
-M8197 := M8002 OR MEP(xSaveIp);
-
+R23812 := 502;                  (* TCP port           *)
 D8325 := 1;                     (* one remote server  *)
 D8395 := 4;                     (* Modbus TCP master  *)
 
@@ -604,12 +609,42 @@ After the startup delay the scheduler reads `D1000` every second from Modbus reg
 
 ### PLC as a Modbus TCP Server
 
-Setting `D8395 := 3` makes the PLC a Modbus TCP server (slave). In that role the PLC answers incoming requests directly, so no `MB_CHANNELS` entry is needed and the driver is not involved. `MB_PORT_TCP` channels are used only for the client (master) role.
+In the server (slave) role the PLC answers incoming Modbus TCP requests itself instead of polling remote servers. No `MB_CHANNELS` entry and no `MB_PROCESS_50` call are needed — the driver is not involved, and the only library call is `MB_SLAVE_INIT_TCP`.
+
+#### `MB_SLAVE_INIT_TCP` (Function)
+
+Enables Modbus TCP slave (server) mode on the L02 built-in Ethernet port.
+
+| Variable   | Scope | Type   | Description                                                                                   |
+| ---------- | ----- | ------ | --------------------------------------------------------------------------------------------- |
+| `xInit`    | INPUT | `BOOL` | Initialisation command. The TCP slave mode is enabled on every rising edge.                     |
+| `iTcpPort` | INPUT | `INT`  | Modbus TCP port. A non-zero value is written to `R23812`; `0` keeps the current port (`502`).   |
+
+The function does not configure the network addresses — write them with `L02_SET_IP` from the `Utils` library (§ Setup above). `L02_SET_IP` sets `M8197` on every write, which applies both the addresses and the TCP port written by this function.
+
+#### Example
+
+```iecst
+(* Trigger: first scan, and again after an address or port change. *)
+xApplyIp := M8002 OR MEP(xSaveIp);
+
+M0 := L02_SET_IP(xApplyIp, IP_PLC_IP, 192, 168, 1, 100); (* PLC IP *)
+(* IP_PLC_MASK / IP_PLC_GATEWAY: one more pulse per setting.        *)
+
+(* Modbus TCP server on port 502. *)
+M0 := MB_SLAVE_INIT_TCP(M8013, 502);
+```
+
+Feeding the one-second clock `M8013` into `xInit` re-applies the server mode every second, exactly as the RS485 initialisation functions are re-triggered after startup.
+
+> - When this function is used, do not write `D8395` from the application — it owns that register.
+> - Every `L02_SET_IP` write restarts the L02 interface (`M8197`), including the value written to `R23812`. Write the addresses first and call `MB_SLAVE_INIT_TCP` afterwards.
+> - Server mode is mutually exclusive with the `MB_PORT_TCP` client channels: one PLC cannot poll remote servers and serve requests as a slave over the same port at the same time. Select one role per project.
 
 ### Notes
 
 > - `iPort := MB_PORT_TCP` is mandatory; if it is left at an RS485 port, the channel is driven on that serial port instead of the Ethernet port.
-> - The IP addresses are written explicitly by the `L02_SET_IP` calls above; re-pulse `xSaveIp` after any address changes so that `M8197` applies them.
+> - The IP addresses are written explicitly by the `L02_SET_IP` calls above; re-pulse `xSaveIp` after any address change so that the new addresses are applied (one pulse per setting — see § Setup).
 > - `M8062` (Modbus timeout) and `M8395` (connection flag) are network indications that complement the driver's per-channel `mb_iTimeout` output. The suspend/retry policy is the same as for an RS485 channel.
 
 ---

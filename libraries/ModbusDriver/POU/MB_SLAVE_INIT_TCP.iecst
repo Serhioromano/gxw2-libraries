@@ -1,0 +1,24 @@
+(*
+  MB_SLAVE_INIT_TCP - initialise the L02 built-in Ethernet port as a
+  Modbus TCP slave (server).
+
+  D8395 = 3 selects Modbus TCP server mode, so the PLC answers incoming
+  Modbus TCP requests itself. No MB_CHANNELS entry and no MB_PROCESS_50
+  call are needed for this role.
+
+  The PLC IP address, subnet mask and gateway are written with
+  L02_SET_IP (Utils library); that function latches M8197 so the new
+  addresses are applied. Do not write D8395 from the application when
+  this function is used.
+
+  iTcpPort = 0 keeps the current Modbus TCP port (502 after power-up);
+  a non-zero value is written to R23812 and is applied together with the
+  IP addresses on the next M8197 pulse of L02_SET_IP.
+*)
+IF MEP(xInit) THEN
+	IF iTcpPort > 0 THEN
+		R23812 := iTcpPort; (* Modbus TCP port *)
+	END_IF;
+	D8395 := 3; (* Modbus TCP server (slave) *)
+END_IF;
+MB_SLAVE_INIT_TCP := TRUE;
