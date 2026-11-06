@@ -57,7 +57,4 @@ CASE iRemote OF
 		R23865 := LIMITATION(0, iAI, 50); (* AI points = words, written as-is *)
 		R23866 := (LIMITATION(0, iDO, 512) + 7) / 8; (* DO points -> bytes, 8 points per byte *)
 		R23867 := LIMITATION(0, iAO, 50); (* AO points = words, written as-is *)
-
-	ELSE
-		(* iRemote outside 1..4: no coupler selected, nothing is written *)
 END_CASE;
