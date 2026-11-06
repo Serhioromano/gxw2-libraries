@@ -82,7 +82,7 @@ The recommended workflow is:
 | `MB_PROCESS_50` | Function Block | Cycle through the channels and perform their read/write transfers. |
 | `MB_REG_50` | Structure | Per-channel configuration (declared by the application as `MB_CHANNELS`). |
 | `EIP_INIT` | Function | Select EtherNet/IP and set the number of remote couplers. |
-| `EIP_INIT_REMOTE` | Function | Write the DI/DO/AI/AO point configuration of one remote coupler. |
+| `EIP_INIT_REMOTE` | Function | Write the DI/DO/AI/AO size configuration of one remote coupler. |
 | `EIP_DI` | Function | Read one digital input point of a remote coupler. |
 | `EIP_DO` | Function | Read one digital output point of a remote coupler. |
 | `EIP_DO_SET` | Function | Write one digital output point of a remote coupler. |
@@ -708,14 +708,16 @@ The expansion capacity of the PLC is **512 DI**, **512 DO**, **50 AI** and **50 
 | `D8325` | `1`–`4` | Number of remote couplers. Written by `EIP_INIT` |
 | `R23830` / `R23840` / `R23850` / `R23860` | — | Block base of coupler 1 / 2 / 3 / 4 (`IP_REMOTE1` … `IP_REMOTE4`) |
 
-Each coupler owns a ten-register block. Within a block the point counts are located at fixed offsets from the base:
+Each coupler owns a ten-register block. Within a block the configuration is located at fixed offsets from the base:
 
 | Offset | Register (coupler 1) | Meaning |
 |--------|----------------------|---------|
-| `+4` | `R23834` | DI points |
-| `+5` | `R23835` | AI points |
-| `+6` | `R23836` | DO points |
-| `+7` | `R23837` | AO points |
+| `+4` | `R23834` | DI **bytes** (`0`–`64`) |
+| `+5` | `R23835` | AI **words** (`0`–`50`) |
+| `+6` | `R23836` | DO **bytes** (`0`–`64`) |
+| `+7` | `R23837` | AO **words** (`0`–`50`) |
+
+> **Units differ per area:** the bit areas (DI, DO) are configured in **bytes** — one point is one bit, so 8 points per byte, rounded up — while the analog areas (AI, AO) are configured in **words** — one point is one 16-bit word, so the point count is written as-is. `EIP_INIT_REMOTE` always takes points and performs the byte conversion for the bit areas itself.
 
 > **Note:** the register order is DI, **AI**, **DO**, AO — AI precedes DO, which differs from the argument order of `EIP_INIT_REMOTE`.
 
@@ -740,22 +742,31 @@ xEipDone := EIP_INIT(M8002, 2);   (* EtherNet/IP, 2 remote couplers *)
 
 ### `EIP_INIT_REMOTE`
 
-Writes the point configuration (DI, DO, AI, AO) of one remote coupler into its register block. The body is an explicit `CASE iRemote OF` with integer labels `1`–`4` and the R registers written literally — no address arithmetic. The L02 expansion capacity is **512 DI**, **512 DO**, **50 AI** and **50 AO** points in total; each value is clamped to its own capacity (`0`–`512` for DI and DO, `0`–`50` for AI and AO). Any other value of `iRemote` writes nothing.
+Writes the I/O configuration (DI, DO, AI, AO) of one remote coupler into its register block. The body is an explicit `CASE iRemote OF` with integer labels `1`–`4` and the R registers written literally — no address arithmetic. The L02 expansion capacity is **512 DI**, **512 DO**, **50 AI** and **50 AO** points in total; each value is clamped to its own capacity (`0`–`512` for DI and DO, `0`–`50` for AI and AO). Any other value of `iRemote` writes nothing.
+
+**Arguments are points; DI/DO registers take bytes, AI/AO registers take words.** You tell the function how many points you installed and it writes the size the coupler expects:
+
+| Area | Conversion | Register range |
+|------|------------|----------------|
+| DI / DO | `(points + 7) / 8` — 1 point = 1 bit, 8 points per byte, rounded up | `0`–`64` bytes |
+| AI / AO | none — 1 point = 1 word, written as-is | `0`–`50` words |
+
+Clamping is applied to the point count first, so the registers can never receive a value above `64` (DI/DO bytes) or `50` (AI/AO words).
 
 | Variable | Scope | Type | Description |
 |----------|-------|------|-------------|
 | `iRemote` | INPUT | INT | Coupler selector — one of the `EIP_REMOTE1` … `EIP_REMOTE4` constants (`1`–`4`) |
-| `iDI` | INPUT | INT | Number of DI points, clamped to `0`–`512` — written to `R23834` / `R23844` / `R23854` / `R23864` |
-| `iDO` | INPUT | INT | Number of DO points, clamped to `0`–`512` — written to `R23836` / `R23846` / `R23856` / `R23866` |
-| `iAI` | INPUT | INT | Number of AI points, clamped to `0`–`50` — written to `R23835` / `R23845` / `R23855` / `R23865` |
-| `iAO` | INPUT | INT | Number of AO points, clamped to `0`–`50` — written to `R23837` / `R23847` / `R23857` / `R23867` |
+| `iDI` | INPUT | INT | Number of DI **points**, clamped to `0`–`512`; written as `(points + 7) / 8` bytes to `R23834` / `R23844` / `R23854` / `R23864` |
+| `iDO` | INPUT | INT | Number of DO **points**, clamped to `0`–`512`; written as `(points + 7) / 8` bytes to `R23836` / `R23846` / `R23856` / `R23866` |
+| `iAI` | INPUT | INT | Number of AI **points** (= words), clamped to `0`–`50`; written as-is to `R23835` / `R23845` / `R23855` / `R23865` |
+| `iAO` | INPUT | INT | Number of AO **points** (= words), clamped to `0`–`50`; written as-is to `R23837` / `R23847` / `R23857` / `R23867` |
 
 > **Note:** the capacity limits apply to the **whole PLC**, not to one coupler. The function clamps each value to its own limit but does not verify the sum, so the application must keep the totals over all enabled couplers within 512 DI, 512 DO, 50 AI and 50 AO points.
 
 Register written per coupler (the column order is the register order DI, AI, DO, AO):
 
-| Coupler | DI | AI | DO | AO |
-|---------|----|----|----|----|
+| Coupler | DI (bytes) | AI (words) | DO (bytes) | AO (words) |
+|---------|------------|------------|------------|------------|
 | `EIP_REMOTE1` | `R23834` | `R23835` | `R23836` | `R23837` |
 | `EIP_REMOTE2` | `R23844` | `R23845` | `R23846` | `R23847` |
 | `EIP_REMOTE3` | `R23854` | `R23855` | `R23856` | `R23857` |
@@ -764,12 +775,15 @@ Register written per coupler (the column order is the register order DI, AI, DO,
 **Example:**
 
 ```iecst
-(* Four remote couplers, written once from PRG_INIT (M8002 execution condition). *)
-xDone := EIP_INIT_REMOTE(EIP_REMOTE1, 8, 8, 4, 2);   (* 8 DI, 8 DO, 4 AI, 2 AO *)
-xDone := EIP_INIT_REMOTE(EIP_REMOTE2, 16, 16, 0, 0);
-xDone := EIP_INIT_REMOTE(EIP_REMOTE3, 0, 0, 8, 0);
-xDone := EIP_INIT_REMOTE(EIP_REMOTE4, 4, 4, 2, 2);
+(* Four remote couplers, written once from PRG_INIT (M8002 execution condition).
+   Arguments are points; the comment shows what reaches the registers. *)
+xDone := EIP_INIT_REMOTE(EIP_REMOTE1, 8, 8, 4, 2);   (* 8 DI -> 1 byte, 8 DO -> 1 byte, 4 AI -> 4 words, 2 AO -> 2 words *)
+xDone := EIP_INIT_REMOTE(EIP_REMOTE2, 16, 16, 0, 0); (* 16 DI -> 2 bytes, 16 DO -> 2 bytes *)
+xDone := EIP_INIT_REMOTE(EIP_REMOTE3, 0, 0, 8, 0);   (* 8 AI -> 8 words *)
+xDone := EIP_INIT_REMOTE(EIP_REMOTE4, 4, 4, 2, 2);   (* 4 DI -> 1 byte, 4 DO -> 1 byte, 2 AI -> 2 words, 2 AO -> 2 words *)
 ```
+
+> **Watch the byte count:** an odd DI/DO point count rounds up (9 DI → 2 bytes = 16 bits), so the scanner reserves the whole byte. Keep DI/DO counts as multiples of 8 to keep the reserved bit area tight. Only DI/DO are converted — an AI/AO point count is already a word count.
 
 > **Note:** `EIP_INIT_REMOTE` has no trigger input and writes on every call, so call it from `PRG_INIT` or gate the call with a one-scan pulse. It performs no return assignment, so its result is always the default (`FALSE`); the function is used for its device side effect.
 
@@ -806,7 +820,7 @@ IF EIP_DI(EIP_REMOTE2, 5) THEN
 END_IF;
 
 (* Switch digital output 7 of coupler 1 = M6007 *)
-xDone := EIP_DO_SET(EIP_REMOTE1, 7, TRUE);
+For 
 
 (* Analog input 3 of coupler 4 = R23253, scaled to engineering units *)
 iValue := F_SCALE(EIP_AI(EIP_REMOTE4, 3), 0, 4000, 0, 1000, FALSE);

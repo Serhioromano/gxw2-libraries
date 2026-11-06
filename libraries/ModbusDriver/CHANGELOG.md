@@ -1,5 +1,11 @@
 # Changelog
 
+## V21 — 2026-11-06
+
+- **Fixed (`EIP_INIT_REMOTE.iecst` / `.csv`):** the DI/DO coupler registers hold **bytes**, not points — the function wrote the raw point counts, so the scanner would have reserved 8× the bit area (8 DI written as `8` bytes = 64 points instead of `1` byte). The API still takes points; the conversion is now done inside the function: `R23834 := (LIMITATION(0, iDI, 512) + 7) / 8;` and `R23836 := (LIMITATION(0, iDO, 512) + 7) / 8;` (1 point = 1 bit, 8 points per byte, rounded up) — same pattern for couplers 2–4 (`R23844`/`R23846`, `R23854`/`R23856`, `R23864`/`R23866`). The AI/AO registers stay **words** (`R23835 := LIMITATION(0, iAI, 50);`, `R23837 := LIMITATION(0, iAO, 50);`) because one analog point is one 16-bit word, so no conversion is applied there. Clamping still happens on the point counts, so the registers can only receive `0`–`64` (DI/DO bytes) and `0`–`50` (AI/AO words).
+- **Documentation (`Modbus.md`):** the coupler block table now reads "DI/DO **bytes**, AI/AO **words**" with their ranges, a "Units differ per area" note explains the conversion, the `EIP_INIT_REMOTE` section gained a conversion table and updated parameter descriptions, the examples show what reaches each register, and a note warns that odd DI/DO point counts round up to a whole byte. The register table header is now "DI (bytes) / AI (words) / DO (bytes) / AO (words)".
+- **Documentation (`AGENT.md`, `PRG_MB_TEST.iecst`):** recorded the mixed units — no `* 2` on AI/AO, no missing `+7)/8` on DI/DO — the resulting register ranges, and the values the test program produces (`R23834 = 1`, `R23836 = 1`, `R23835 = 4`, `R23837 = 2`).
+
 ## V20 — 2026-11-06
 
 - **Fixed (`PRG_MB_TEST.iecst`, compile error C1028):** the test program referenced the optional monitoring aliases `g_iAutoReg0` and `g_xCoil0`, so it failed to compile with `The undefined label 'g_iAutoReg0' is being used.` / `'g_xCoil0'` unless `GVL_MB_TEST.csv` was imported with exactly those labels. The demo writes now target the channel buffers directly — `D600 := 1234;` (channel 0, `iDDevNum := 600`) and `M500 := NOT M500;` (channel 2, `iDDevNum := 500`) — so the program compiles with only `MB_CHANNELS` / `c_MB_CHANNELS_NUM` declared. `GVL_MB_TEST.csv` still declares the aliases (device-assigned to the same devices) for monitoring; importing it is optional.

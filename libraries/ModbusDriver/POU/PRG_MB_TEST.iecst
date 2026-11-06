@@ -38,8 +38,9 @@ EI(TRUE);
 (* EtherNet/IP with 2 remote couplers: D8395 := 0, D8325 := 2 *)
 xEipInit := EIP_INIT(M8002, 2);
 
-(* Remote coupler 1 - 8 DI, 8 DO, 4 AI, 2 AO ->
-   R23834 = 8, R23835 = 4, R23836 = 8, R23837 = 2 *)
+(* Remote coupler 1 - 8 DI, 8 DO, 4 AI, 2 AO points.
+   DI/DO registers hold BYTES: R23834 = 1 (8 DI bits / 8), R23836 = 1 (8 DO).
+   AI/AO registers hold WORDS:  R23835 = 4, R23837 = 2 (points as-is) *)
 xEipRemote := EIP_INIT_REMOTE(EIP_REMOTE1, 8, 8, 4, 2);
 
 (* PLC IP 192.168.0.100 -> R23807/R23808, applied by M8197 *)

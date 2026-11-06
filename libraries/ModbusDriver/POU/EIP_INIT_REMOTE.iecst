@@ -12,10 +12,17 @@
     R23836 DO         R23846 DO         R23856 DO         R23866 DO
     R23837 AO         R23847 AO         R23857 AO         R23867 AO
 
+  DI / DO registers hold BYTES, AI / AO registers hold WORDS. The caller
+  always passes POINTS; only the bit areas are converted here:
+    DI / DO  1 point = 1 bit  -> ceil(points / 8) bytes (8 points per byte)
+    AI / AO  1 point = 1 word -> written as-is (one register per point)
+
   Expansion capacity of the L02: 512 DI, 512 DO, 50 AI and 50 AO points in
   total. Each value is clamped to its own capacity here (DI/DO to 512, AI/AO
-  to 50); the sum across the enabled couplers is not checked, so the
-  application must keep the totals within the same limits.
+  to 50) before the conversion, so the registers receive 0..64 DI bytes,
+  0..64 DO bytes, 0..50 AI words and 0..50 AO words. The sum across the
+  enabled couplers is not checked, so the application must keep the totals
+  within the same limits.
 
   Note the register order: DI, AI, DO, AO - AI precedes DO, so the device
   layout differs from the argument order (iDI, iDO, iAI, iAO).
@@ -28,28 +35,28 @@
 *)
 CASE iRemote OF
 	1: (* EIP_REMOTE1 *)
-		R23834 := LIMITATION(0, iDI, 512); (* DI points *)
-		R23835 := LIMITATION(0, iAI, 50); (* AI points *)
-		R23836 := LIMITATION(0, iDO, 512); (* DO points *)
-		R23837 := LIMITATION(0, iAO, 50); (* AO points *)
+		R23834 := (LIMITATION(0, iDI, 512) + 7) / 8; (* DI points -> bytes, 8 points per byte *)
+		R23835 := LIMITATION(0, iAI, 50); (* AI points = words, written as-is *)
+		R23836 := (LIMITATION(0, iDO, 512) + 7) / 8; (* DO points -> bytes, 8 points per byte *)
+		R23837 := LIMITATION(0, iAO, 50); (* AO points = words, written as-is *)
 
 	2: (* EIP_REMOTE2 *)
-		R23844 := LIMITATION(0, iDI, 512); (* DI points *)
-		R23845 := LIMITATION(0, iAI, 50); (* AI points *)
-		R23846 := LIMITATION(0, iDO, 512); (* DO points *)
-		R23847 := LIMITATION(0, iAO, 50); (* AO points *)
+		R23844 := (LIMITATION(0, iDI, 512) + 7) / 8; (* DI points -> bytes, 8 points per byte *)
+		R23845 := LIMITATION(0, iAI, 50); (* AI points = words, written as-is *)
+		R23846 := (LIMITATION(0, iDO, 512) + 7) / 8; (* DO points -> bytes, 8 points per byte *)
+		R23847 := LIMITATION(0, iAO, 50); (* AO points = words, written as-is *)
 
 	3: (* EIP_REMOTE3 *)
-		R23854 := LIMITATION(0, iDI, 512); (* DI points *)
-		R23855 := LIMITATION(0, iAI, 50); (* AI points *)
-		R23856 := LIMITATION(0, iDO, 512); (* DO points *)
-		R23857 := LIMITATION(0, iAO, 50); (* AO points *)
+		R23854 := (LIMITATION(0, iDI, 512) + 7) / 8; (* DI points -> bytes, 8 points per byte *)
+		R23855 := LIMITATION(0, iAI, 50); (* AI points = words, written as-is *)
+		R23856 := (LIMITATION(0, iDO, 512) + 7) / 8; (* DO points -> bytes, 8 points per byte *)
+		R23857 := LIMITATION(0, iAO, 50); (* AO points = words, written as-is *)
 
 	4: (* EIP_REMOTE4 *)
-		R23864 := LIMITATION(0, iDI, 512); (* DI points *)
-		R23865 := LIMITATION(0, iAI, 50); (* AI points *)
-		R23866 := LIMITATION(0, iDO, 512); (* DO points *)
-		R23867 := LIMITATION(0, iAO, 50); (* AO points *)
+		R23864 := (LIMITATION(0, iDI, 512) + 7) / 8; (* DI points -> bytes, 8 points per byte *)
+		R23865 := LIMITATION(0, iAI, 50); (* AI points = words, written as-is *)
+		R23866 := (LIMITATION(0, iDO, 512) + 7) / 8; (* DO points -> bytes, 8 points per byte *)
+		R23867 := LIMITATION(0, iAO, 50); (* AO points = words, written as-is *)
 
 	ELSE
 		(* iRemote outside 1..4: no coupler selected, nothing is written *)
