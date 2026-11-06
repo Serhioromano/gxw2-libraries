@@ -1,0 +1,56 @@
+(*
+  EIP_INIT_REMOTE - write the DI / DO / AI / AO point counts of one remote
+  EIP coupler into its R-register block.
+
+  iRemote selects the coupler with the EIP_REMOTE1..EIP_REMOTE4 constants
+  (1..4). Every coupler owns a ten-register block; the four count registers
+  are listed explicitly below so the written devices are readable here:
+
+    coupler 1         coupler 2         coupler 3         coupler 4
+    R23834 DI         R23844 DI         R23854 DI         R23864 DI
+    R23835 AI         R23845 AI         R23855 AI         R23865 AI
+    R23836 DO         R23846 DO         R23856 DO         R23866 DO
+    R23837 AO         R23847 AO         R23857 AO         R23867 AO
+
+  Expansion capacity of the L02: 512 DI, 512 DO, 50 AI and 50 AO points in
+  total. Each value is clamped to its own capacity here (DI/DO to 512, AI/AO
+  to 50); the sum across the enabled couplers is not checked, so the
+  application must keep the totals within the same limits.
+
+  Note the register order: DI, AI, DO, AO - AI precedes DO, so the device
+  layout differs from the argument order (iDI, iDO, iAI, iAO).
+
+  The function has no trigger input: it writes on every call. Call it from
+  PRG_INIT (execution condition M8002) or gate the call with a one-scan
+  pulse. The written values are applied by L02_SET_IP, which sets M8197 and
+  thereby restarts the interface - keep this call before the L02_SET_IP
+  writes of the same scan.
+*)
+CASE iRemote OF
+	1: (* EIP_REMOTE1 *)
+		R23834 := LIMITATION(0, iDI, 512); (* DI points *)
+		R23835 := LIMITATION(0, iAI, 50); (* AI points *)
+		R23836 := LIMITATION(0, iDO, 512); (* DO points *)
+		R23837 := LIMITATION(0, iAO, 50); (* AO points *)
+
+	2: (* EIP_REMOTE2 *)
+		R23844 := LIMITATION(0, iDI, 512); (* DI points *)
+		R23845 := LIMITATION(0, iAI, 50); (* AI points *)
+		R23846 := LIMITATION(0, iDO, 512); (* DO points *)
+		R23847 := LIMITATION(0, iAO, 50); (* AO points *)
+
+	3: (* EIP_REMOTE3 *)
+		R23854 := LIMITATION(0, iDI, 512); (* DI points *)
+		R23855 := LIMITATION(0, iAI, 50); (* AI points *)
+		R23856 := LIMITATION(0, iDO, 512); (* DO points *)
+		R23857 := LIMITATION(0, iAO, 50); (* AO points *)
+
+	4: (* EIP_REMOTE4 *)
+		R23864 := LIMITATION(0, iDI, 512); (* DI points *)
+		R23865 := LIMITATION(0, iAI, 50); (* AI points *)
+		R23866 := LIMITATION(0, iDO, 512); (* DO points *)
+		R23867 := LIMITATION(0, iAO, 50); (* AO points *)
+
+	ELSE
+		(* iRemote outside 1..4: no coupler selected, nothing is written *)
+END_CASE;

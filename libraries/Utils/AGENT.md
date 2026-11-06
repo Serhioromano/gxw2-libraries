@@ -2,7 +2,7 @@
 
 ## Overview
 
-Utils is a Structured Text library for Coolmay FX3G PLCs (GX Works 2) providing general-purpose utility functions and function blocks: bit-level WORD/DWORD manipulation, linear and non-linear scaling, sign negation, on/off hysteresis regulators, index rotation/shifting, progress calculation, 3-position valve control, analog-input scaling (host PLC and L02 modules), L02 IP configuration, and block memory move. L02 POUs have no prefix.
+Utils is a Structured Text library for Coolmay FX3G PLCs (GX Works 2) providing general-purpose utility functions and function blocks: bit-level WORD/DWORD manipulation, linear and non-linear scaling, sign negation, on/off hysteresis regulators, index rotation/shifting, progress calculation, 3-position valve control, analog-input scaling (host PLC and L02 modules), L02 IP configuration, EtherNet/IP scanner setup (`EIP_INIT`, `EIP_INIT_REMOTE`), and block memory move. L02 POUs have no prefix.
 
 ## File Structure
 
@@ -30,6 +30,8 @@ POU/
 ├── F_VALVE_POS.iecst / .csv        — Function: valve position % from elapsed/total TIME
 ├── F_FLT10.iecst / .csv            — Function: divide an INT by 10 (returns REAL)
 ├── L02_SET_IP.iecst / .csv       — Function: write one L02 IP setting while xInit is TRUE and set M8197 (returns BOOL)
+├── EIP_INIT.iecst / .csv          — Function: select EtherNet/IP and set the number of remote couplers (D8395/D8325)
+├── EIP_INIT_REMOTE.iecst / .csv   — Function: write the DI/DO/AI/AO point counts of one remote EIP coupler
 ├── F_MBMOV.iecst / .csv            — Function: block-move N words between devices (returns BOOL)
 ├── FB_HYST.iecst / .csv            — Function Block: heating on/off regulator with hysteresis
 ├── FB_HYST_COOL.iecst / .csv       — Function Block: cooling on/off regulator with hysteresis
@@ -81,6 +83,8 @@ POU/
 |---|---|---|
 | `F_FLT10` | REAL | Divide `iIn` by 10 |
 | `L02_SET_IP` | BOOL | Write one L02 IP setting (`iWts` = `IP_*` constant, octets `wIp1..wIp4`) while `xInit` is `TRUE` and set `M8197` so it is applied |
+| `EIP_INIT` | BOOL | While `xInit`: write `D8325` (`iModules` clamped to `1`–`4`) and `D8395 := 0` (EtherNet/IP); returns `xInit` |
+| `EIP_INIT_REMOTE` | BOOL | Write the point counts of one remote coupler (`iRemote` = `EIP_REMOTE1`…`EIP_REMOTE4`) into its R-register block; always returns `FALSE` |
 | `F_MBMOV` | BOOL | Move `iNum` words from device `iSrc` to device `iDst` |
 
 ### Function blocks
@@ -103,6 +107,7 @@ Constants only — no device-bound variables.
 | `IP_PLC_GATEWAY` | 23800 | R-register address of the gateway |
 | `IP_PLC_MASK` | 23802 | R-register address of the subnet mask |
 | `IP_REMOTE1`..`IP_REMOTE4` | 23830 / 23840 / 23850 / 23860 | R-register addresses of remote EIP couplers |
+| `EIP_REMOTE1`..`EIP_REMOTE4` | 1 / 2 / 3 / 4 | Remote coupler selector for `EIP_INIT_REMOTE` (not an R address) |
 | `STYPE_0_10V` | 0 | Analog sensor type: 0-10 V |
 | `STYPE_0_20MA` | 0 | Analog sensor type: 0-20 mA |
 | `STYPE_4_20MA` | 1 | Analog sensor type: 4-20 mA |
@@ -117,7 +122,10 @@ Constants only — no device-bound variables.
 - CSV files are UTF-16 LE + BOM, tab-separated, every cell quoted, LF line endings; `.iecst` files use CRLF. Comments in English.
 - Functions are called positionally (`result := F_SCALE(50, 0, 100, 0, 1000, FALSE);`); FBs are called with named arguments (`fbHyst(xIn := …, iSV := …)`). `PRG_UTL_TEST` enforces this style.
 - `F_SCALE` and `F_DSCALE` have six inputs: the five ranges plus the trailing `xNoLimit` flag. A new input parameter is always appended last, so the first five positional arguments keep their meaning; every call site must still pass the flag explicitly (`FALSE` = clamp as before). Callers inside the library: `F_WORK_LEFT`, `F_SCALE_NL`, `FB_SCALE_AI`, `L02_SCALE_AI` (for `F_SCALE`), `F_WORK_LEFT_TIME`, `F_VALVE_POS` (for `F_DSCALE`).
-- `F_MBMOV` and `L02_SET_IP` are "command" functions with no return assignment — they always return the default (`FALSE`). Call them for their device side effects, not for a result.
+- `F_MBMOV` and `L02_SET_IP` are "command" functions with no return assignment — they always return the default (`FALSE`). Call them for their device side effects, not for a result. `EIP_INIT_REMOTE` follows the same pattern; `EIP_INIT` returns its `xInit` instead (like the Modbus init functions).
+- `EIP_INIT` owns `D8325` and `D8395` (`0` = EtherNet/IP): while `xInit` is `TRUE` it clamps `iModules` to `1`–`4` into `D8325` and writes `D8395 := 0`. It does not touch `M8197` — the configuration is applied by the `L02_SET_IP` call of the same scan, so the call order is `EIP_INIT` → `EIP_INIT_REMOTE` (×4) → `L02_SET_IP` (IP/mask/gateway/remote addresses). Never write `D8325`/`D8395` from the application while it is used.
+- `EIP_INIT_REMOTE` has **no** trigger input and writes on every call — place it in `PRG_INIT` (M8002 execution condition) or gate the call with a one-scan pulse. Its body is an explicit `CASE iRemote OF` with integer labels `1`–`4` (named CASE labels are not allowed in GX Works 2) and literal R registers — `R23834`/`R23844`/`R23854`/`R23864` for DI, `R23835`/…/`R23865` for AI, `R23836`/…/`R23866` for DO, `R23837`/…/`R23867` for AO. Keep it that way: no address arithmetic and no index-register (`Z5`/`R0Z5`) access, so a reader sees which device is written without looking up constants. Values of `iRemote` outside `1`–`4` write nothing. Counts are clamped per capacity: DI and DO to `0`–`512`, AI and AO to `0`–`50` — the L02 expands up to **512 DI + 512 DO** and **50 AI + 50 AO** in total, and the sum across couplers is not verified by the function. **The register order is DI, AI, DO, AO** — AI precedes DO, unlike the argument order `iDI, iDO, iAI, iAO`. Do not "fix" this: it is the PLC register layout.
+- `EIP_REMOTE1`…`EIP_REMOTE4` (`1`–`4`) are the coupler selectors; `IP_REMOTE1`…`IP_REMOTE4` (`23830`…`23860`) are the R-register bases. Keep both sets — `EIP_INIT_REMOTE` uses one of each.
 - `L02_SET_IP` owns `M8197`: while `xInit` is `TRUE` (`IF xInit THEN`) it writes the R-register pair and sets `M8197` (apply + interface restart). `M8197` is self-resetting in the PLC, so there is no `ELSE` branch and nobody — neither the function nor the application — ever clears it. Note the intentional asymmetry: the body is **level**-triggered while the `MB_*_INIT_*` / `MTB_*` init functions in the Modbus library use `IF MEP(xInit) THEN` (`MB_MASTER_INIT_TCP` follows the same call-site convention as `L02_SET_IP`, see the ModbusDriver `AGENT.md`). That is deliberate — a single `MEP` is shared by all calls of one function body, so an edge-triggered `L02_SET_IP` would execute only the first call per rising edge and silently skip mask/gateway/remote writes made in the same scan. Applications must therefore pass a one-scan trigger (`M8002`, `MEP` of an HMI pulse) as `xInit` and must never tie it to `TRUE` (continuous interface restarts), and must not write `M8197` themselves.
 - `F_FLT10` returns `REAL` (body is `INT_TO_REAL(iIn) / 10.0`) — set the return type to REAL in the GX Works 2 POU properties. `F_NEG` returns `INT` and `F_DNEG` returns `DINT`; both are set the same way.
 - `F_NEG` / `F_DNEG` negate by multiplication with `-1`, so the most negative value of the type (`-32768` / `-2147483648`) has no positive counterpart and is returned unchanged. `F_DNEG` tolerates a DINT multiplied by an `INT` literal, as `FB_VALVE_3P` already does (`DWORD_TO_DINT(dwTemp) * 50`).
@@ -129,6 +137,6 @@ Constants only — no device-bound variables.
 
 ## Test Program (PRG_UTL_TEST)
 
-`PRG_UTL_TEST` is a compile-and-run smoke test that calls every function and function block with representative inputs; results are stored in auto-assigned labels for the device monitor. Function calls use positional arguments, FB calls use named arguments. Manual inputs: `xSaveIp` (triggers `L02_SET_IP`), `xValveEnable` (enables `FB_VALVE_3P`). Device side effects: while `xSaveIp` is `TRUE`, `L02_SET_IP` writes IP 192.168.0.100 to `R23807/R23808` and sets the self-resetting `M8197`, `F_MBMOV` copies `D100..D103` → `D200..D203`, `F_SCALE_NL` writes `D100..D103`.
+`PRG_UTL_TEST` is a compile-and-run smoke test that calls every function and function block with representative inputs; results are stored in auto-assigned labels for the device monitor. Function calls use positional arguments, FB calls use named arguments. Manual inputs: `xSaveIp` (triggers `L02_SET_IP` and `EIP_INIT`), `xValveEnable` (enables `FB_VALVE_3P`). Device side effects: while `xSaveIp` is `TRUE`, `EIP_INIT` writes `D8325 := 2` and `D8395 := 0`, `L02_SET_IP` writes IP 192.168.0.100 to `R23807/R23808` and sets the self-resetting `M8197`, `F_MBMOV` copies `D100..D103` → `D200..D203`, `F_SCALE_NL` writes `D100..D103`. `EIP_INIT_REMOTE(EIP_REMOTE1, 8, 8, 4, 2)` runs every scan and writes `R23834 := 8` (DI), `R23835 := 4` (AI), `R23836 := 8` (DO), `R23837 := 2` (AO).
 
 `F_SCALE` is exercised twice, to cover both modes: `iScale` (`xNoLimit = FALSE`, `50` → `500`) and `iScaleNoLimit` (`xNoLimit = TRUE`, `150` extrapolated → `1500`). The same holds for `F_DSCALE` with `diDScale` (`150000` clamped → `1000000`) and `diDScaleNoLimit` (`150000` extrapolated → `1500000`).

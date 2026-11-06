@@ -1,0 +1,30 @@
+  (*
+    EIP_INIT - configure the L02 built-in Ethernet port for EtherNet/IP and
+    set the number of remote couplers.
+
+    While xInit is TRUE:
+      D8325 := iModules   number of remote modules (clamped to 1..4)
+      D8395 := 0          protocol selector: EtherNet/IP
+
+    The body is level-triggered on purpose - pass a one-scan pulse as xInit,
+    e.g. xEipDone := EIP_INIT(M8002, 2);
+    Never tie xInit to TRUE.
+
+    The written values are applied by L02_SET_IP, which sets M8197 and thereby
+    restarts the interface. Call EIP_INIT and EIP_INIT_REMOTE before the
+    L02_SET_IP writes of the same scan.
+
+    Do not write D8325 or D8395 from the application when this function is used.
+  *)
+  IF xInit THEN
+    IF iModules < 1 THEN
+      D8325 := 1; (* at least one remote module *)
+    ELSIF iModules > 4 THEN
+      D8325 := 4; (* at most four remote modules *)
+    ELSE
+      D8325 := iModules;
+    END_IF;
+
+    D8395 := 0; (* EtherNet/IP protocol *)
+  END_IF;
+  EIP_INIT := xInit;

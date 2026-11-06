@@ -25,7 +25,7 @@
 
 ### Utils
 
-Набор готовых функций: `ISBON`/`DISBON` (проверка бита), `SETB`/`DSETB`, `RSTB`/`DRSTB`, `SRB`/`DSRB`, регуляторы `HYST`/`HYST_COOL`, счётчики наработки `WORK_LEFT`/`WORK_LEFT_TIME`, `INCN`, `SHIFT`, `L02_SET_IP`, `VALVE_3P`, масштабирование `SCALE`/`DSCALE`/`SCALE_NL`.
+Набор готовых функций: `ISBON`/`DISBON` (проверка бита), `SETB`/`DSETB`, `RSTB`/`DRSTB`, `SRB`/`DSRB`, регуляторы `HYST`/`HYST_COOL`, счётчики наработки `WORK_LEFT`/`WORK_LEFT_TIME`, `INCN`, `SHIFT`, `L02_SET_IP`, `EIP_INIT`/`EIP_INIT_REMOTE` (настройка EtherNet/IP), `VALVE_3P`, масштабирование `SCALE`/`DSCALE`/`SCALE_NL`.
 
 ### TimeControl
 

@@ -9,7 +9,7 @@
     F_ISBON / F_DISBON / F_SETB / F_DSETB / F_RSTB / F_DRSTB / F_SRB / F_DSRB
     F_LIMIT / F_SCALE / F_SCALE_NL / F_INCN / F_SHFT / F_NEG / F_DNEG
     F_WORK_LEFT / F_WORK_LEFT_TIME / F_VALVE_POS / F_FLT10
-    F_L02_SET_IP / F_MBMOV
+    L02_SET_IP / F_MBMOV / EIP_INIT / EIP_INIT_REMOTE
 
   Function blocks exercised:
     FB_HYST / FB_HYST_COOL / FB_SCALE_AI / FB_L02_SCALE_AI / FB_VALVE_3P
@@ -17,7 +17,8 @@
   Notes:
     - FB_VALVE_3P uses the TCO_DINT_50 ticker and therefore requires the
       TimeControl library with its TCO timer setup.
-    - F_L02_SET_IP, F_MBMOV and F_SCALE_NL write to R / D devices.
+    - L02_SET_IP, EIP_INIT, EIP_INIT_REMOTE, F_MBMOV and F_SCALE_NL write
+      to R / D devices.
     - Force the xSaveIp / xValveEnable inputs and watch the result labels.
 *)
 
@@ -59,6 +60,13 @@ iValvePos     := F_VALVE_POS(T#5s, T#10s);
 rFlt10 := F_FLT10(123);
 
 (* --- Setup / command functions (device side effects) --- *)
+(* Selects EtherNet/IP with 2 remote couplers while xSaveIp is TRUE *)
+xEipInit := EIP_INIT(xSaveIp, 2);
+
+(* Remote coupler 1 - 8 DI, 8 DO, 4 AI, 2 AO ->
+   R23834 = 8, R23835 = 4, R23836 = 8, R23837 = 2 *)
+xEipRemote := EIP_INIT_REMOTE(EIP_REMOTE1, 8, 8, 4, 2);
+
 (* Writes IP 192.168.0.100 to R23807/R23808 while xSaveIp is TRUE *)
 xSetIp := L02_SET_IP(xSaveIp, IP_PLC_IP, 192, 168, 0, 100);
 

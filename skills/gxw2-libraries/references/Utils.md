@@ -1,6 +1,6 @@
-# Utils V8 — Library for Coolmay FX3G PLC
+# Utils V9 — Library for Coolmay FX3G PLC
 
-Utils is a library of general-purpose functions and function blocks for Mitsubishi FX3G PLCs programmed in GX Works 2. It provides bit-level WORD/DWORD manipulation, linear and non-linear scaling, sign negation, on/off hysteresis regulators, index rotation and shifting, progress calculation, a 3-position valve controller, analog-input scaling for the host PLC and L02 modules, and L02 IP configuration.
+Utils is a library of general-purpose functions and function blocks for Mitsubishi FX3G PLCs programmed in GX Works 2. It provides bit-level WORD/DWORD manipulation, linear and non-linear scaling, sign negation, on/off hysteresis regulators, index rotation and shifting, progress calculation, a 3-position valve controller, analog-input scaling for the host PLC and L02 modules, L02 IP configuration, and EtherNet/IP scanner configuration.
 
 The functions are stateless: they return their result directly and are designed to be used inside expressions. The function blocks hold internal state and are called every scan.
 
@@ -64,6 +64,8 @@ Scaling is provided in three forms: linear 16-bit (`F_SCALE`), linear 32-bit (`F
 | `F_VALVE_POS` | Function | Valve position 0..1000 from elapsed/total TIME |
 | `F_FLT10` | Function | Divide an INT by 10, returning REAL |
 | `L02_SET_IP` | Function | Write L02 IP settings to R registers and apply them |
+| `EIP_INIT` | Function | Select EtherNet/IP and set the number of remote couplers |
+| `EIP_INIT_REMOTE` | Function | Write the DI/DO/AI/AO point configuration of one remote coupler |
 | `F_MBMOV` | Function | Block-move N words between devices |
 | `FB_HYST` | Function Block | Heating on/off regulator with hysteresis |
 | `FB_HYST_COOL` | Function Block | Cooling on/off regulator with hysteresis |
@@ -550,6 +552,87 @@ xDone := F_MBMOV(TRUE, 100, 4, 200);
 ```
 
 > **Note:** `F_MBMOV` performs no return assignment, so its result is always the default (`FALSE`). It is used for its device side effect.
+
+---
+
+## EtherNet/IP Scanner Configuration
+
+The L02 built-in Ethernet port can run either a Modbus TCP role (`L02_SET_IP`, ModbusDriver library) or the EtherNet/IP scanner role. The scanner role is configured with two functions: `EIP_INIT` selects the protocol and the number of remote couplers, `EIP_INIT_REMOTE` writes the point configuration of each coupler. The values are applied by the `L02_SET_IP` call that sets `M8197`, so the configuration order inside one scan is `EIP_INIT` → `EIP_INIT_REMOTE` (×4) → `L02_SET_IP` (PLC IP, mask, gateway, remote addresses).
+
+The expansion capacity of the PLC is **512 DI**, **512 DO**, **50 AI** and **50 AO** points in total; these limits cover all enabled couplers together.
+
+| Device | Value | Meaning |
+|--------|-------|---------|
+| `D8395` | `0` | Protocol selector: EtherNet/IP. Written by `EIP_INIT` |
+| `D8325` | `1`–`4` | Number of remote couplers. Written by `EIP_INIT` |
+| `R23830` / `R23840` / `R23850` / `R23860` | — | Block base of coupler 1 / 2 / 3 / 4 (`IP_REMOTE1` … `IP_REMOTE4`) |
+
+Each coupler owns a ten-register block. Within a block the point counts are located at fixed offsets from the base:
+
+| Offset | Register (coupler 1) | Meaning |
+|--------|----------------------|---------|
+| `+4` | `R23834` | DI points |
+| `+5` | `R23835` | AI points |
+| `+6` | `R23836` | DO points |
+| `+7` | `R23837` | AO points |
+
+> **Note:** the register order is DI, **AI**, **DO**, AO — AI precedes DO, which differs from the argument order of `EIP_INIT_REMOTE`.
+
+### `EIP_INIT`
+
+Selects the EtherNet/IP protocol and sets the number of remote couplers while `xInit` is `TRUE`. `iModules` is clamped to `1`–`4` and written to `D8325`; `D8395` is set to `0`.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `xInit` | INPUT | BOOL | Trigger. The configuration is written while this input is `TRUE` |
+| `iModules` | INPUT | INT | Number of remote couplers, clamped to `1`–`4` and written to `D8325` |
+
+**Example:**
+
+```iecst
+xEipDone := EIP_INIT(M8002, 2);   (* EtherNet/IP, 2 remote couplers *)
+```
+
+> **Trigger (`xInit`):** pass a bit that is `TRUE` for **one scan only** (`M8002`, `MEP` of an HMI "save" pulse) and never tie `xInit` to `TRUE`. `EIP_INIT` returns `xInit`.
+
+> **Note:** `EIP_INIT` writes `D8325` and `D8395` only — it does not touch `M8197`. The values become active on the `L02_SET_IP` call of the same scan. Do not write `D8325` or `D8395` from the application while this function is used.
+
+### `EIP_INIT_REMOTE`
+
+Writes the point configuration (DI, DO, AI, AO) of one remote coupler into its register block. The body is an explicit `CASE iRemote OF` with integer labels `1`–`4` and the R registers written literally — no address arithmetic. The L02 expansion capacity is **512 DI**, **512 DO**, **50 AI** and **50 AO** points in total; each value is clamped to its own capacity (`0`–`512` for DI and DO, `0`–`50` for AI and AO). Any other value of `iRemote` writes nothing.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `iRemote` | INPUT | INT | Coupler selector — one of the `EIP_REMOTE1` … `EIP_REMOTE4` constants (`1`–`4`) |
+| `iDI` | INPUT | INT | Number of DI points, clamped to `0`–`512` — written to `R23834` / `R23844` / `R23854` / `R23864` |
+| `iDO` | INPUT | INT | Number of DO points, clamped to `0`–`512` — written to `R23836` / `R23846` / `R23856` / `R23866` |
+| `iAI` | INPUT | INT | Number of AI points, clamped to `0`–`50` — written to `R23835` / `R23845` / `R23855` / `R23865` |
+| `iAO` | INPUT | INT | Number of AO points, clamped to `0`–`50` — written to `R23837` / `R23847` / `R23857` / `R23867` |
+
+> **Note:** the capacity limits apply to the **whole PLC**, not to one coupler. The function clamps each value to its own limit but does not verify the sum, so the application must keep the totals over all enabled couplers within 512 DI, 512 DO, 50 AI and 50 AO points.
+
+Register written per coupler (the column order is the register order DI, AI, DO, AO):
+
+| Coupler | DI | AI | DO | AO |
+|---------|----|----|----|----|
+| `EIP_REMOTE1` | `R23834` | `R23835` | `R23836` | `R23837` |
+| `EIP_REMOTE2` | `R23844` | `R23845` | `R23846` | `R23847` |
+| `EIP_REMOTE3` | `R23854` | `R23855` | `R23856` | `R23857` |
+| `EIP_REMOTE4` | `R23864` | `R23865` | `R23866` | `R23867` |
+
+**Example:**
+
+```iecst
+(* Four remote couplers, written once from PRG_INIT (M8002 execution condition). *)
+xDone := EIP_INIT_REMOTE(EIP_REMOTE1, 8, 8, 4, 2);   (* 8 DI, 8 DO, 4 AI, 2 AO *)
+xDone := EIP_INIT_REMOTE(EIP_REMOTE2, 16, 16, 0, 0);
+xDone := EIP_INIT_REMOTE(EIP_REMOTE3, 0, 0, 8, 0);
+xDone := EIP_INIT_REMOTE(EIP_REMOTE4, 4, 4, 2, 2);
+```
+
+> **Note:** `EIP_INIT_REMOTE` has no trigger input and writes on every call, so call it from `PRG_INIT` or gate the call with a one-scan pulse. It performs no return assignment, so its result is always the default (`FALSE`); the function is used for its device side effect.
+
+> **Coupler selector constants:** `EIP_REMOTE1` … `EIP_REMOTE4` are the values `1`–`4`. They are not the same as `IP_REMOTE1` … `IP_REMOTE4`, which are the `R` register base addresses (`23830` … `23860`).
 
 ---
 
