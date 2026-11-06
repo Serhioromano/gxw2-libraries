@@ -1,0 +1,21 @@
+(*
+  EIP_AI - read one analog input point of a remote EIP coupler.
+  Returns INT (raw module value).
+
+  iRemote = EIP_REMOTE1..EIP_REMOTE4 (1..4), iNum is a 0-based point number.
+
+  Analog inputs occupy 50 words per coupler:
+    coupler 1  R23100..R23149
+    coupler 2  R23150..R23199
+    coupler 3  R23200..R23249
+    coupler 4  R23250..R23299
+  Registers are addressed through the index register Z1, so the body computes
+  the register from base + (coupler - 1) * step + point.
+
+  Arguments are clamped with LIMITATION: iRemote to 1..4 and iNum to
+  0..49, so a call with an out-of-range point reads/writes the nearest
+  valid point instead of being skipped.
+  The return type is set in the GX Works 2 POU properties.
+*)
+Z1 := 23100 + (LIMITATION(1, iRemote, 4) - 1) * 50 + LIMITATION(0, iNum, 49); (* R23100 + coupler offset *)
+EIP_AI := R0Z1;

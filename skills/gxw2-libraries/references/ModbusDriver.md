@@ -1,8 +1,8 @@
-# Modbus RTU Driver V7 — Library for Coolmay FX3G PLC
+# Modbus RTU Driver V19 — Library for Coolmay FX3G PLC
 
 ## Abstract
 
-The Modbus RTU Driver enables a Coolmay FX3G PLC to operate as a Modbus RTU master or slave on its two auxiliary RS485 ports (port 2 and port 3). On L02-series PLCs the same channel model also drives the built-in Ethernet port as a Modbus TCP master (client) — a channel whose `iPort` is `MB_PORT_TCP` is handled with the same scheduling logic as an RS485 channel — and `MB_MASTER_INIT_TCP` / `MB_SLAVE_INIT_TCP` configure that port as a Modbus TCP master (client) or slave (server). Communication channels are configured through an application-declared array `MB_CHANNELS` of type `MB_REG_50`; a single function block, `MB_PROCESS_50`, cycles through that array and performs the channel transfers on a **50 ms** tick.
+The Modbus RTU Driver enables a Coolmay FX3G PLC to operate as a Modbus RTU master or slave on its two auxiliary RS485 ports (port 2 and port 3). On L02-series PLCs the same channel model also drives the built-in Ethernet port as a Modbus TCP master (client) — a channel whose `iPort` is `MB_PORT_TCP` is handled with the same scheduling logic as an RS485 channel — and `MB_MASTER_INIT_TCP` / `MB_SLAVE_INIT_TCP` configure that port as a Modbus TCP master (client) or slave (server). The library also configures the same L02 Ethernet port as an **EtherNet/IP scanner** (`EIP_INIT`, `EIP_INIT_REMOTE`) and provides typed access to the remote coupler I/O (`EIP_DI`, `EIP_DO`, `EIP_DO_SET`, `EIP_AI`, `EIP_AO`, `EIP_AO_SET`). Communication channels are configured through an application-declared array `MB_CHANNELS` of type `MB_REG_50`; a single function block, `MB_PROCESS_50`, cycles through that array and performs the channel transfers on a **50 ms** tick.
 
 The `MB_CHANNELS` array and the `c_MB_CHANNELS_NUM` capacity constant are declared by the application in its own global label list, sized to the number of channels it actually uses; `MB_PROCESS_50` cycles through exactly that many channels. This keeps the automatically-assigned device usage proportional to the number of channels actually configured.
 
@@ -81,6 +81,14 @@ The recommended workflow is:
 | `MTB_SLAVE_PORT3` | Function | Reconfigure port 3 for the Mitsubishi protocol. |
 | `MB_PROCESS_50` | Function Block | Cycle through the channels and perform their read/write transfers. |
 | `MB_REG_50` | Structure | Per-channel configuration (declared by the application as `MB_CHANNELS`). |
+| `EIP_INIT` | Function | Select EtherNet/IP and set the number of remote couplers. |
+| `EIP_INIT_REMOTE` | Function | Write the DI/DO/AI/AO point configuration of one remote coupler. |
+| `EIP_DI` | Function | Read one digital input point of a remote coupler. |
+| `EIP_DO` | Function | Read one digital output point of a remote coupler. |
+| `EIP_DO_SET` | Function | Write one digital output point of a remote coupler. |
+| `EIP_AI` | Function | Read one analog input point of a remote coupler. |
+| `EIP_AO` | Function | Read one analog output point of a remote coupler. |
+| `EIP_AO_SET` | Function | Write one analog output point of a remote coupler. |
 
 ---
 
@@ -124,6 +132,14 @@ The recommended workflow is:
 | `MB_BPS_115200` | `8` | 115200 bps. |
 
 > `MB_DL_7` and `MB_DL_8` are provided for completeness but are not selectable through `MB_PORT_SETTINGS`, which always configures **8 data bits**.
+
+### EtherNet/IP Coupler Selectors
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `EIP_REMOTE1` … `EIP_REMOTE4` | `1` … `4` | Coupler selector for `EIP_INIT_REMOTE` and the `EIP_*` I/O accessors. |
+
+> These are **not** the `IP_REMOTE1` … `IP_REMOTE4` constants of the `Utils` library: those are `R` register base addresses (`23830` … `23860`) used by `L02_SET_IP` to store the remote IP addresses. `EIP_REMOTE*` select the EtherNet/IP coupler.
 
 ### Ports
 
@@ -677,6 +693,137 @@ Feeding the one-second clock `M8013` into `xInit` re-applies the server mode eve
 > - `iPort := MB_PORT_TCP` is mandatory; if it is left at an RS485 port, the channel is driven on that serial port instead of the Ethernet port.
 > - The IP addresses are written explicitly by the `L02_SET_IP` calls above; re-pulse `xSaveIp` after any address change so that the new addresses are applied.
 > - `M8062` (Modbus timeout) and `M8395` (connection flag) are network indications that complement the driver's per-channel `mb_iTimeout` output. The suspend/retry policy is the same as for an RS485 channel.
+
+---
+
+## EtherNet/IP Scanner
+
+The L02 built-in Ethernet port can run either a Modbus TCP role (this library) or the EtherNet/IP scanner role (this chapter). The IP addresses of both roles are written with `L02_SET_IP` from the `Utils` library. The scanner role is configured with two functions: `EIP_INIT` selects the protocol and the number of remote couplers, `EIP_INIT_REMOTE` writes the point configuration of each coupler. The values are applied by the `L02_SET_IP` call that sets `M8197`, so the configuration order inside one scan is `EIP_INIT` → `EIP_INIT_REMOTE` (×4) → `L02_SET_IP` (PLC IP, mask, gateway, remote addresses).
+
+The expansion capacity of the PLC is **512 DI**, **512 DO**, **50 AI** and **50 AO** points in total; these limits cover all enabled couplers together.
+
+| Device | Value | Meaning |
+|--------|-------|---------|
+| `D8395` | `0` | Protocol selector: EtherNet/IP. Written by `EIP_INIT` |
+| `D8325` | `1`–`4` | Number of remote couplers. Written by `EIP_INIT` |
+| `R23830` / `R23840` / `R23850` / `R23860` | — | Block base of coupler 1 / 2 / 3 / 4 (`IP_REMOTE1` … `IP_REMOTE4`) |
+
+Each coupler owns a ten-register block. Within a block the point counts are located at fixed offsets from the base:
+
+| Offset | Register (coupler 1) | Meaning |
+|--------|----------------------|---------|
+| `+4` | `R23834` | DI points |
+| `+5` | `R23835` | AI points |
+| `+6` | `R23836` | DO points |
+| `+7` | `R23837` | AO points |
+
+> **Note:** the register order is DI, **AI**, **DO**, AO — AI precedes DO, which differs from the argument order of `EIP_INIT_REMOTE`.
+
+### `EIP_INIT`
+
+Selects the EtherNet/IP protocol and sets the number of remote couplers while `xInit` is `TRUE`. `iModules` is clamped to `1`–`4` and written to `D8325`; `D8395` is set to `0`.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `xInit` | INPUT | BOOL | Trigger. The configuration is written while this input is `TRUE` |
+| `iModules` | INPUT | INT | Number of remote couplers, clamped to `1`–`4` and written to `D8325` |
+
+**Example:**
+
+```iecst
+xEipDone := EIP_INIT(M8002, 2);   (* EtherNet/IP, 2 remote couplers *)
+```
+
+> **Trigger (`xInit`):** pass a bit that is `TRUE` for **one scan only** (`M8002`, `MEP` of an HMI "save" pulse) and never tie `xInit` to `TRUE`. `EIP_INIT` returns `xInit`.
+
+> **Note:** `EIP_INIT` writes `D8325` and `D8395` only — it does not touch `M8197`. The values become active on the `L02_SET_IP` call of the same scan. Do not write `D8325` or `D8395` from the application while this function is used.
+
+### `EIP_INIT_REMOTE`
+
+Writes the point configuration (DI, DO, AI, AO) of one remote coupler into its register block. The body is an explicit `CASE iRemote OF` with integer labels `1`–`4` and the R registers written literally — no address arithmetic. The L02 expansion capacity is **512 DI**, **512 DO**, **50 AI** and **50 AO** points in total; each value is clamped to its own capacity (`0`–`512` for DI and DO, `0`–`50` for AI and AO). Any other value of `iRemote` writes nothing.
+
+| Variable | Scope | Type | Description |
+|----------|-------|------|-------------|
+| `iRemote` | INPUT | INT | Coupler selector — one of the `EIP_REMOTE1` … `EIP_REMOTE4` constants (`1`–`4`) |
+| `iDI` | INPUT | INT | Number of DI points, clamped to `0`–`512` — written to `R23834` / `R23844` / `R23854` / `R23864` |
+| `iDO` | INPUT | INT | Number of DO points, clamped to `0`–`512` — written to `R23836` / `R23846` / `R23856` / `R23866` |
+| `iAI` | INPUT | INT | Number of AI points, clamped to `0`–`50` — written to `R23835` / `R23845` / `R23855` / `R23865` |
+| `iAO` | INPUT | INT | Number of AO points, clamped to `0`–`50` — written to `R23837` / `R23847` / `R23857` / `R23867` |
+
+> **Note:** the capacity limits apply to the **whole PLC**, not to one coupler. The function clamps each value to its own limit but does not verify the sum, so the application must keep the totals over all enabled couplers within 512 DI, 512 DO, 50 AI and 50 AO points.
+
+Register written per coupler (the column order is the register order DI, AI, DO, AO):
+
+| Coupler | DI | AI | DO | AO |
+|---------|----|----|----|----|
+| `EIP_REMOTE1` | `R23834` | `R23835` | `R23836` | `R23837` |
+| `EIP_REMOTE2` | `R23844` | `R23845` | `R23846` | `R23847` |
+| `EIP_REMOTE3` | `R23854` | `R23855` | `R23856` | `R23857` |
+| `EIP_REMOTE4` | `R23864` | `R23865` | `R23866` | `R23867` |
+
+**Example:**
+
+```iecst
+(* Four remote couplers, written once from PRG_INIT (M8002 execution condition). *)
+xDone := EIP_INIT_REMOTE(EIP_REMOTE1, 8, 8, 4, 2);   (* 8 DI, 8 DO, 4 AI, 2 AO *)
+xDone := EIP_INIT_REMOTE(EIP_REMOTE2, 16, 16, 0, 0);
+xDone := EIP_INIT_REMOTE(EIP_REMOTE3, 0, 0, 8, 0);
+xDone := EIP_INIT_REMOTE(EIP_REMOTE4, 4, 4, 2, 2);
+```
+
+> **Note:** `EIP_INIT_REMOTE` has no trigger input and writes on every call, so call it from `PRG_INIT` or gate the call with a one-scan pulse. It performs no return assignment, so its result is always the default (`FALSE`); the function is used for its device side effect.
+
+> **Coupler selector constants:** `EIP_REMOTE1` … `EIP_REMOTE4` are the values `1`–`4`. They are not the same as `IP_REMOTE1` … `IP_REMOTE4`, which are the `R` register base addresses (`23830` … `23860`).
+
+### Remote I/O Access
+
+The remote points are mapped into the PLC device areas with a fixed stride per coupler. Six functions give typed, bounds-checked access to those devices — the coupler is selected with the `EIP_REMOTE1` … `EIP_REMOTE4` constants and `iNum` is a **0-based** point number inside that coupler.
+
+| Function | Call | Returns |
+|----------|------|---------|
+| `EIP_DI` | `EIP_DI(iRemote, iNum)` | `BOOL` — state of a digital input |
+| `EIP_DO` | `EIP_DO(iRemote, iNum)` | `BOOL` — state of a digital output |
+| `EIP_DO_SET` | `EIP_DO_SET(iRemote, iNum, xVal)` | `BOOL` — the value written |
+| `EIP_AI` | `EIP_AI(iRemote, iNum)` | `INT` — raw analog input value |
+| `EIP_AO` | `EIP_AO(iRemote, iNum)` | `INT` — value last written to an analog output |
+| `EIP_AO_SET` | `EIP_AO_SET(iRemote, iNum, iVal)` | `INT` — the value written |
+
+Device map (point count per coupler and the resulting device range):
+
+| Area | Points per coupler | Coupler 1 | Coupler 2 | Coupler 3 | Coupler 4 |
+|------|--------------------|-----------|-----------|-----------|-----------|
+| DI | 200 | `M5000`–`M5199` | `M5200`–`M5399` | `M5400`–`M5599` | `M5600`–`M5799` |
+| DO | 200 | `M6000`–`M6199` | `M6200`–`M6399` | `M6400`–`M6599` | `M6600`–`M6799` |
+| AI | 50 | `R23100`–`R23149` | `R23150`–`R23199` | `R23200`–`R23249` | `R23250`–`R23299` |
+| AO | 50 | `R23300`–`R23349` | `R23350`–`R23399` | `R23400`–`R23449` | `R23450`–`R23499` |
+
+**Example:**
+
+```iecst
+(* Digital inputs of coupler 2, point 5 = M5205 *)
+IF EIP_DI(EIP_REMOTE2, 5) THEN
+    iCounter := iCounter + 1;
+END_IF;
+
+(* Switch digital output 7 of coupler 1 = M6007 *)
+xDone := EIP_DO_SET(EIP_REMOTE1, 7, TRUE);
+
+(* Analog input 3 of coupler 4 = R23253, scaled to engineering units *)
+iValue := F_SCALE(EIP_AI(EIP_REMOTE4, 3), 0, 4000, 0, 1000, FALSE);
+
+(* Analog output 0 of coupler 2 = R23350 *)
+iWritten := EIP_AO_SET(EIP_REMOTE2, 0, 2000);
+```
+
+> **Range clamping:** arguments are clamped with `LIMITATION`, never rejected — `iRemote` to `1`–`4` and `iNum` to `0`–`199` (DI, DO) or `0`–`49` (AI, AO). An out-of-range call therefore reads/writes the nearest valid point instead of silently doing nothing, which also keeps a mis-indexed write inside the remote I/O area instead of escaping to another device.
+
+> **Address space vs. capacity:** the device map above reserves 200 DI, 200 DO, 50 AI and 50 AO per coupler (fixed stride), while the L02 scanner accepts **512 DI, 512 DO, 50 AI and 50 AO in total**. With three or four couplers the reserved slots exceed the total capacity, so `EIP_INIT_REMOTE` must be called with point counts that keep the *sum* inside those limits — the functions do not verify the sum.
+
+> **Index registers:** the functions use `Z0` (bit areas) and `Z1` (word areas) to address the device. Do not rely on the contents of `Z0`/`Z1` across these calls, and do not use those two index registers for the application's own indexed addressing.
+
+> **Role exclusivity:** `D8395` holds one protocol selector for the whole port — `0` = EtherNet/IP scanner, `3` = Modbus TCP server, `4` = Modbus TCP client. The EtherNet/IP scanner and the Modbus TCP roles are mutually exclusive; whichever POU runs last in a scan wins, so configure only one role per project.
+
+> **Library dependency:** the `EIP_*` functions are part of this library; `L02_SET_IP` and the `IP_*` constants belong to the `Utils` library, and `F_SCALE` used in the example above is also a `Utils` function.
 
 ---
 

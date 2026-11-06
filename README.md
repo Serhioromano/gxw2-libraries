@@ -25,7 +25,7 @@
 
 ### Utils
 
-Набор готовых функций: `ISBON`/`DISBON` (проверка бита), `SETB`/`DSETB`, `RSTB`/`DRSTB`, `SRB`/`DSRB`, регуляторы `HYST`/`HYST_COOL`, счётчики наработки `WORK_LEFT`/`WORK_LEFT_TIME`, `INCN`, `SHIFT`, `L02_SET_IP`, `EIP_INIT`/`EIP_INIT_REMOTE` (настройка EtherNet/IP), `VALVE_3P`, масштабирование `SCALE`/`DSCALE`/`SCALE_NL`.
+Набор готовых функций: `ISBON`/`DISBON` (проверка бита), `SETB`/`DSETB`, `RSTB`/`DRSTB`, `SRB`/`DSRB`, регуляторы `HYST`/`HYST_COOL`, счётчики наработки `WORK_LEFT`/`WORK_LEFT_TIME`, `INCN`, `SHIFT`, `L02_SET_IP` (IP-адреса L02), `VALVE_3P`, масштабирование `SCALE`/`DSCALE`/`SCALE_NL`.
 
 ### TimeControl
 
@@ -35,7 +35,7 @@
 
 ### ModbusDriver
 
-Драйвер Modbus RTU для Coolmay FX3G: настройка порта `MB_PORT_SETTINGS`, инициализация slave/master `MB_SLAVE_INIT_PORT2/3`, `MB_MASTER_INIT_PORT2/3`, главный блок обмена `MB_PROCESS_50` (работает по 50-мс тикеру TimeControl). Документация на английском и русском. Требует установки `UtilsV4.sul` и `TimeControlV2.sul` (см. требования в документации).
+Драйвер Modbus RTU для Coolmay FX3G: настройка порта `MB_PORT_SETTINGS`, инициализация slave/master `MB_SLAVE_INIT_PORT2/3`, `MB_MASTER_INIT_PORT2/3`, главный блок обмена `MB_PROCESS_50` (работает по 50-мс тикеру TimeControl), а также настройка EtherNet/IP-сканера `EIP_INIT`/`EIP_INIT_REMOTE` и доступ к удалённым входам/выходам `EIP_DI`/`EIP_DO`/`EIP_DO_SET`/`EIP_AI`/`EIP_AO`/`EIP_AO_SET`. Документация на английском и русском. Требует установки `UtilsV4.sul` и `TimeControlV2.sul` (см. требования в документации).
 
 ### Easing
 

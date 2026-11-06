@@ -1,0 +1,21 @@
+(*
+  EIP_DI - read one digital input point of a remote EIP coupler.
+  Returns BOOL (TRUE = point ON).
+
+  iRemote = EIP_REMOTE1..EIP_REMOTE4 (1..4), iNum is a 0-based point number.
+
+  Digital inputs occupy 200 points per coupler:
+    coupler 1  M5000..M5199
+    coupler 2  M5200..M5399
+    coupler 3  M5400..M5599
+    coupler 4  M5600..M5799
+  Devices are addressed through the index register Z0, so the body computes
+  the device from base + (coupler - 1) * step + point.
+
+  Arguments are clamped with LIMITATION: iRemote to 1..4 and iNum to
+  0..199, so a call with an out-of-range point reads the nearest valid point
+  instead of being skipped.
+  The return type is set in the GX Works 2 POU properties.
+*)
+Z0 := 5000 + (LIMITATION(1, iRemote, 4) - 1) * 200 + LIMITATION(0, iNum, 199); (* M5000 + coupler offset *)
+EIP_DI := M0Z0;

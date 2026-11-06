@@ -11,13 +11,39 @@
   them all; the overlapping port configurations are intentional and only
   serve compile/debug coverage.
 
-  Channel storage (MB_CHANNELS, c_MB_CHANNELS_NUM) and the demo value
-  labels g_iAutoReg*, g_iDemandReg, g_xCoil are declared in
-  GVL_MB_TEST.csv.
+  Channel storage (MB_CHANNELS, c_MB_CHANNELS_NUM) is declared in
+  GVL_MB_TEST.csv. The demo values are written to the device buffers
+  themselves (D600.. for channel 0, M500.. for channel 2 - the iDDevNum
+  values below), so the program does not depend on any additional
+  application labels. GVL_MB_TEST.csv also aliases those devices as
+  g_iAutoReg0..2, g_iDemandReg0..2, g_xCoil0..7 for monitoring; importing
+  it is optional.
+
+  The L02 Ethernet port setup at the top exercises the EIP_* functions of
+  this library and L02_SET_IP of the Utils library, so a compile needs the
+  Utils library and its IP_PLC_IP constant in the project. Only one role
+  of the port is usable at a time: D8395 is written by EIP_INIT (0) and by
+  the Modbus TCP init calls (3/4) in the same scan - coverage only.
 *)
 
 (* Enable interrupts - required by the ADPRW communication instruction. *)
 EI(TRUE);
+
+(* --- L02 Ethernet / EtherNet/IP setup (Utils library) --- *)
+(* The trigger is M8002 (one scan only): L02_SET_IP applies the settings
+   through the self-resetting M8197, which restarts the L02 interface, so
+   it must never be tied to TRUE. Both EtherNet/IP and Modbus TCP are set
+   up here for coverage only - the modes are mutually exclusive and the
+   Modbus TCP initialisation below overwrites D8395 in the same scan. *)
+(* EtherNet/IP with 2 remote couplers: D8395 := 0, D8325 := 2 *)
+xEipInit := EIP_INIT(M8002, 2);
+
+(* Remote coupler 1 - 8 DI, 8 DO, 4 AI, 2 AO ->
+   R23834 = 8, R23835 = 4, R23836 = 8, R23837 = 2 *)
+xEipRemote := EIP_INIT_REMOTE(EIP_REMOTE1, 8, 8, 4, 2);
+
+(* PLC IP 192.168.0.100 -> R23807/R23808, applied by M8197 *)
+xSetIp := L02_SET_IP(M8002, IP_PLC_IP, 192, 168, 0, 100);
 
 (* Build the serial-port bit-field (9600 baud, 8 data bits, no parity, 1 stop bit). *)
 dwPortSettings := MB_PORT_SETTINGS(MB_PARITY_NONE, MB_STOPBIT_1, MB_BPS_9600);
@@ -97,14 +123,24 @@ IF M1 THEN
     END_IF;
 END_IF;
 
-(* Demo: write a value to channel 0 - written immediately (xWriteOnChange). *)
+(* Demo: write a value to channel 0 - written immediately (xWriteOnChange).
+   D600 is the value buffer of channel 0 (iDDevNum := 600). *)
 IF M2 THEN
-    g_iAutoReg0 := 1234;
+    D600 := 1234;
     M2 := FALSE;
 END_IF;
 
-(* Demo: toggle a coil on channel 2 - written immediately (xWriteOnChange). *)
+(* Demo: toggle a coil on channel 2 - written immediately (xWriteOnChange).
+   M500 is the value buffer of channel 2 (iDDevNum := 500). *)
 IF M3 THEN
-    g_xCoil0 := NOT g_xCoil0;
+    M500 := NOT M500;
     M3 := FALSE;
 END_IF;
+
+(* --- Remote EIP I/O access (this library) --- *)
+xDi1 := EIP_DI(EIP_REMOTE1, 0);              (* reads M5000 *)
+xDo1 := EIP_DO(EIP_REMOTE2, 5);              (* reads M6205 *)
+iAi1 := EIP_AI(EIP_REMOTE1, 2);              (* reads R23102 *)
+iAo1 := EIP_AO(EIP_REMOTE3, 0);              (* reads R23400 *)
+xDoSet := EIP_DO_SET(EIP_REMOTE2, 5, TRUE);  (* M6205 := TRUE *)
+iAoSet := EIP_AO_SET(EIP_REMOTE3, 0, 1000);  (* R23400 := 1000 *)
