@@ -1,6 +1,6 @@
 {
   "name": "gxw2-libraries",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Pi skill routing GX Works 2 Structured Text tasks to the bundled Coolmay AlarmManager, ModbusDriver, TimeControl and Utils manuals.",
   "keywords": [
     "pi-package",
