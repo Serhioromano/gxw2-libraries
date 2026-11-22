@@ -1,0 +1,4 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"xInit"	"BOOL"	""	"Initialisation command: TCP slave mode is enabled on rising edge"
+"VAR_INPUT"	"iTcpPort"	"INT"	""	"Modbus TCP port written to R23812; 0 keeps the current port (default 502)"

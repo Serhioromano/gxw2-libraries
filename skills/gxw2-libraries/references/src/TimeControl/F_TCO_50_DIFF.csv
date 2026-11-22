@@ -1,0 +1,4 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Device"	"Address"	"Comment"
+"VAR_INPUT"	"dwStart"	"DWORD"	""	""	""	"Saved ticker value (start point)"
+"VAR_INPUT"	"dwCurrent"	"DWORD"	""	""	""	"Current ticker value (e.g. TCO_DINT_50)"

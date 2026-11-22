@@ -1,0 +1,5 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"iShifter"	"INT"	""	"Shift amount"
+"VAR_INPUT"	"iIdx"	"INT"	""	"Current index"
+"VAR_INPUT"	"iMax"	"INT"	""	"Maximum index"

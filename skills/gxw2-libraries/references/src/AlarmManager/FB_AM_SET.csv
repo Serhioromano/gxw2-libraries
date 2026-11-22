@@ -1,0 +1,6 @@
+"plc"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"iNum"	"INT"	""	"Alarm identifier. Range: 0 to c_AM_ALARMS_NUM"
+"VAR_INPUT"	"xState"	"BOOL"	""	"Boolean condition that triggers alarm registration"
+"VAR"	"ALARM"	"ST_AM_ALARM"	""	"Local copy of the alarm object being evaluated"
+"VAR"	"iAN"	"INT"	""	"Alarm identifier. Range: 0 to c_AM_ALARMS_NUM"

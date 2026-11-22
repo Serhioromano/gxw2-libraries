@@ -1,0 +1,5 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"iMax"	"INT"	""	"Upper limit"
+"VAR_INPUT"	"iIn"	"INT"	""	"Value to clamp"
+"VAR_INPUT"	"iMin"	"INT"	""	"Lower limit"

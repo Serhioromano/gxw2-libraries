@@ -1,0 +1,5 @@
+"plc"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_IN_OUT"	"IN"	"BOOL"	""	"Reset command signal; cleared automatically after the 1-second window"
+"VAR"	"TP1"	"TP"	""	"Pulse timer (500 ms) holding the event reset window"
+"VAR"	"iCount"	"INT"	""	"Loop index over the event array"

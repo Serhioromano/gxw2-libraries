@@ -1,0 +1,4 @@
+"plc"
+"Label Name"	"Data Type"	"Constant"	"Comment"
+"State"	"BOOL"	""	"TRUE = event condition is currently present"
+"Event"	"BOOL"	""	"TRUE = event is registered/active"

@@ -1,0 +1,7 @@
+"plc"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"iProcessNum"	"INT"	""	"Process group filter; 0 = search all processes"
+"VAR_INPUT"	"iSeverity"	"INT"	""	"Severity filter; 0 = all, 1 = Info, 2 = Warning, 3 = Error"
+"VAR_OUTPUT"	"AC"	"INT"	""	"Number of matching blocking alarms"
+"VAR_OUTPUT"	"Q"	"BOOL"	""	"TRUE = at least one matching blocking alarm is registered"
+"VAR"	"iCount"	"INT"	""	"Loop index over the alarm array"

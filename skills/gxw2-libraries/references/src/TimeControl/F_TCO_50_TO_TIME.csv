@@ -1,0 +1,4 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"dwTicker"	"DWORD"	""	"Elapsed 50 ms ticker count"
+"VAR"	"dwQuot"	"ARRAY [0..1] OF DWORD"	""	"32-bit instruction result (temporary)"

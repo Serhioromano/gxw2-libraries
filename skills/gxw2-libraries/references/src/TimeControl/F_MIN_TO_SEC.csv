@@ -1,0 +1,3 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Device"	"Address"	"Comment"
+"VAR_INPUT"	"iMinutes"	"INT"	""	""	""	"Minutes to convert into seconds"

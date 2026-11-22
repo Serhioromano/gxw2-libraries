@@ -1,0 +1,8 @@
+"plc"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Device"	"Address"	"Comment"	"Remark"	"Relation with System Label"	"System Label Name"	"Attribute"
+"VAR_GLOBAL_CONSTANT"	"c_AM_ERROR"	"INT"	"3"	""	""	"Severity constant: Error (level 3)"	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"c_AM_WARNING"	"INT"	"2"	""	""	"Severity constant: Warning (level 2)"	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"c_AM_INFO"	"INT"	"1"	""	""	"Severity constant: Info / Message (level 1)"	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"c_AM_PACK_D"	"INT"	"0"	""	""	"Pack target constant: write packed data to D registers"	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"c_AM_PACK_R"	"INT"	"1"	""	""	"Pack target constant: write packed data to R registers"	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"c_AM_PACK_M"	"INT"	"2"	""	""	"Pack target constant: write packed data to M devices (one bit per alarm/event)"	""	""	""	""

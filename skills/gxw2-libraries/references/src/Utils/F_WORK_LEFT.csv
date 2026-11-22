@@ -1,0 +1,4 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"iEt"	"INT"	""	"Elapsed time"
+"VAR_INPUT"	"iTw"	"INT"	""	"Total time"

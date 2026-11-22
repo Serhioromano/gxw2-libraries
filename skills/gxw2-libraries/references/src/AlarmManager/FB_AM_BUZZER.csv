@@ -1,0 +1,7 @@
+"plc"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_IN_OUT"	"Reset"	"BOOL"	""	"Input signal to silence the buzzer"
+"VAR_OUTPUT"	"Q"	"BOOL"	""	"TRUE = buzzer requested; latched when the buzzing-alarm count increases, cleared by Reset"
+"VAR_OUTPUT"	"AC"	"INT"	""	"Total number of alarms tagged for buzzer activation"
+"VAR"	"iCount"	"INT"	""	"Loop index over the alarm array"
+"VAR"	"ACM"	"INT"	""	"Buzzer alarm count from the previous scan (edge memory)"

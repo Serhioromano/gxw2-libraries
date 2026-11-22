@@ -1,0 +1,7 @@
+"plc"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"EventNum"	"INT"	""	"Event identifier. Range: 0 to c_AM_EVENTS_NUM"
+"VAR_INPUT"	"EventState"	"BOOL"	""	"Current state of the event condition"
+"VAR_INPUT"	"EventLatch"	"BOOL"	""	"TRUE = event is latched until manually reset"
+"VAR"	"iEN"	"INT"	""	"Internal even nimber"
+"VAR"	"EVENT"	"ST_AM_EVENT"	""	"Event"

@@ -1,0 +1,25 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Device"	"Address"	"Comment"	"Remark"	"Relation with System Label"	"System Label Name"	"Attribute"
+"VAR_GLOBAL_CONSTANT"	"IP_PLC_IP"	"INT"	"23807"	""	""	""	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"IP_PLC_GATEWAY"	"INT"	"23800"	""	""	""	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"IP_PLC_MASK"	"INT"	"23802"	""	""	""	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"IP_REMOTE1"	"INT"	"23830"	""	""	""	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"IP_REMOTE2"	"INT"	"23840"	""	""	""	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"IP_REMOTE3"	"INT"	"23850"	""	""	""	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"IP_REMOTE4"	"INT"	"23860"	""	""	""	""	""	""	""
+
+"VAR_GLOBAL_CONSTANT"	"STYPE_PT100"	"INT"	"0"	""	""	""	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"STYPE_PT1000"	"INT"	"0"	""	""	""	""	""	""	""
+
+"VAR_GLOBAL_CONSTANT"	"STYPE_0_10V"	"INT"	"0"	""	""	""	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"STYPE_0_20MA"	"INT"	"0"	""	""	""	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"STYPE_4_20MA"	"INT"	"1"	""	""	""	""	""	""	""
+
+"VAR_GLOBAL_CONSTANT"	"STYPE_NTC10K"	"INT"	"3"	""	""	""	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"STYPE_NTC"	"INT"	"0"	""	""	""	""	""	""	""
+
+"VAR_GLOBAL_CONSTANT"	"STYPE_TC_K"	"INT"	"0"	""	""	""	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"STYPE_TC_E"	"INT"	"5"	""	""	""	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"STYPE_TC_T"	"INT"	"7"	""	""	""	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"STYPE_TC_S"	"INT"	"9"	""	""	""	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"STYPE_TC_J"	"INT"	"11"	""	""	""	""	""	""	""

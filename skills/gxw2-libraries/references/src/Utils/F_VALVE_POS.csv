@@ -1,0 +1,4 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"tCt"	"TIME"	""	"Current (elapsed) time"
+"VAR_INPUT"	"tTt"	"TIME"	""	"Total travel time"

@@ -1,0 +1,7 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"xEnable"	"BOOL"	""	"Enable block move"
+"VAR_INPUT"	"iSrc"	"INT"	""	"Source device number"
+"VAR_INPUT"	"iNum"	"INT"	""	"Number of words to move"
+"VAR_INPUT"	"iDst"	"INT"	""	"Destination device number"
+"VAR"	"iCount"	"INT"	""	"Loop counter"

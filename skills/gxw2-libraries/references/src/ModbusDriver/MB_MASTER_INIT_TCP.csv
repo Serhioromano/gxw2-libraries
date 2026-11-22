@@ -1,0 +1,5 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"xInit"	"BOOL"	""	"Initialisation command: master mode is configured on rising edge"
+"VAR_INPUT"	"iTcpPort"	"INT"	""	"Modbus TCP port written to R23812; 0 keeps the current port (default 502)"
+"VAR_INPUT"	"iServers"	"INT"	""	"Number of remote servers (1..4) written to D8325"

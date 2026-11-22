@@ -1,0 +1,12 @@
+IF MEP(xInit) THEN
+	temp := F_DSETB(PortSettings, 13);
+	temp := F_DSETB(temp, 14);
+	temp := F_DSETB(temp, 15);
+	DMOV(TRUE, temp, D8120);;
+	D8121 := 255; (* Address station *)
+	D8126 := 0; (* ADPRW command *)
+	D8397 := 0; (* Use PORT2 for ADPRW *)
+	M8196 := TRUE;
+	M8125 := TRUE;
+END_IF;
+MB_MASTER_INIT_PORT2 := xInit;

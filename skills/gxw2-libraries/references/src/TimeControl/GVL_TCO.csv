@@ -1,0 +1,4 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Device"	"Address"	"Comment"	"Remark"	"Relation with System Label"	"System Label Name"	"Attribute"
+"VAR_GLOBAL"	"TCO_DINT_50"	"DWORD"	""	""	""	"Global 50 ms ticker count since PLC start (~3.4 years to signed limit)"	""	""	""	""
+"VAR_GLOBAL"	"TCO_DINT_10"	"DWORD"	""	""	""	"Global 10 ms ticker count since PLC start"	""	""	""	""

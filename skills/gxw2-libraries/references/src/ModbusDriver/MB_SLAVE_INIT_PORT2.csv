@@ -1,0 +1,6 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"xInit"	"BOOL"	""	"Initialisation command: slave is (re-)initialised on rising edge"
+"VAR_INPUT"	"iAddress"	"INT"	""	"Modbus station address of this PLC"
+"VAR_INPUT"	"PortSettings"	"DWORD"	""	"Port bit-field from MB_PORT_SETTINGS"
+"VAR"	"temp"	"DWORD"	""	"Temporary bit-field written to D8120"

@@ -1,0 +1,5 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"iRemote"	"INT"	""	"Remote coupler selector, EIP_REMOTE1..EIP_REMOTE4 (1..4)"
+"VAR_INPUT"	"iNum"	"INT"	""	"Point number, 0-based"
+"VAR_INPUT"	"iVal"	"INT"	""	"Value to write to the analog output point"

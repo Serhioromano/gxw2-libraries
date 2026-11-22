@@ -1,0 +1,8 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"xIn"	"BOOL"	""	"Enable regulator"
+"VAR_INPUT"	"iSV"	"INT"	""	"Set value"
+"VAR_INPUT"	"iPV"	"INT"	""	"Process value"
+"VAR_INPUT"	"iDV"	"INT"	""	"Delta (hysteresis band)"
+"VAR_OUTPUT"	"xQ"	"BOOL"	""	"Regulator output"
+"VAR"	"xOut"	"BOOL"	""	"Internal latch state"

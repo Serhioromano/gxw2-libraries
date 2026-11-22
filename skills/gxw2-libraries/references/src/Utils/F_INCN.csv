@@ -1,0 +1,5 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"xIn"	"BOOL"	""	"Increment trigger"
+"VAR_INPUT"	"iCur"	"INT"	""	"Current index"
+"VAR_INPUT"	"iMax"	"INT"	""	"Maximum index (wraps to 0 after)"

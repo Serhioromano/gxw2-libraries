@@ -1,0 +1,5 @@
+"plc"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"iNum"	"INT"	""	"Alarm identifier to OR into the accumulator"
+"VAR_IN_OUT"	"Q"	"BOOL"	""	"Accumulated OR result; reset to FALSE before the first call in a chain"
+"VAR"	"iAN"	"INT"	""	"Alarm identifier limited"

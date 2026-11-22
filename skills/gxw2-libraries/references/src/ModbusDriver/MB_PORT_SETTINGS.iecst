@@ -1,0 +1,67 @@
+(*
+b0 Data length 0: 7 bits 1: 8 bits
+b1 b2 Parity (b2,b1) 00: None; 01: Odd; 11: Even
+b3 Stop bit 0:1 bit 1: 2 bits
+
+b4 b5 b6 b7 Baud rate (b7,b6,b5,b4)
+(0100):600bps (0101):1200bps (0110):2400bps
+(0111):4800bps (1000):9600bps (1001):19200bps
+(1010):38400bps (1011):57600bps (1101):115200bps
+
+b8 b9 b10 b11 Set 0
+
+b12 0 - RTU, 1 - ASCII
+b13 Set 1
+b14 Set 1
+b15 Set 1
+*)
+
+temp := F_DSRB(temp, 0, TRUE); 
+temp := F_DSRB(temp, 13, TRUE);
+temp := F_DSRB(temp, 14, TRUE);
+temp := F_DSRB(temp, 15, TRUE);
+
+IF Parity = 1 THEN (* ODD *)
+	temp := F_DSRB(temp, 1, TRUE);
+END_IF;
+
+IF Parity = 2 THEN (* EVEN *)
+	temp := F_DSRB(temp, 1, TRUE);
+	temp := F_DSRB(temp, 2, TRUE);
+END_IF;
+
+IF StopBit = 1 THEN
+	temp := F_DSRB(temp, 3, TRUE);
+END_IF;
+
+CASE Baudrate OF
+0:
+	temp := F_DSRB(temp, 6, TRUE);
+1:
+	temp := F_DSRB(temp, 4, TRUE);
+	temp := F_DSRB(temp, 6, TRUE);
+2:
+	temp := F_DSRB(temp, 5, TRUE);
+	temp := F_DSRB(temp, 6, TRUE);
+3:
+	temp := F_DSRB(temp, 4, TRUE);
+	temp := F_DSRB(temp, 5, TRUE);
+	temp := F_DSRB(temp, 6, TRUE);
+4:
+	temp := F_DSRB(temp, 7, TRUE);
+5:
+	temp := F_DSRB(temp, 4, TRUE);
+	temp := F_DSRB(temp, 7, TRUE);
+6:
+	temp := F_DSRB(temp, 5, TRUE);
+	temp := F_DSRB(temp, 7, TRUE);
+7:
+	temp := F_DSRB(temp, 4, TRUE);
+	temp := F_DSRB(temp, 5, TRUE);
+	temp := F_DSRB(temp, 7, TRUE);
+8:
+	temp := F_DSRB(temp, 6, TRUE);
+	temp := F_DSRB(temp, 7, TRUE);
+END_CASE;
+
+MB_PORT_SETTINGS := temp;

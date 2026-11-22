@@ -1,0 +1,7 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"iRemote"	"INT"	""	"Remote coupler selector, EIP_REMOTE1..EIP_REMOTE4 (1..4)"
+"VAR_INPUT"	"iDI"	"INT"	""	"DI points, 0..512 (system total 512): R23834 / R23844 / R23854 / R23864"
+"VAR_INPUT"	"iDO"	"INT"	""	"DO points, 0..512 (system total 512): R23836 / R23846 / R23856 / R23866"
+"VAR_INPUT"	"iAI"	"INT"	""	"AI points, 0..50 (system total 50): R23835 / R23845 / R23855 / R23865"
+"VAR_INPUT"	"iAO"	"INT"	""	"AO points, 0..50 (system total 50): R23837 / R23847 / R23857 / R23867"

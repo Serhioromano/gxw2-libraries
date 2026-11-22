@@ -5,3 +5,4 @@
   - `libraryname/AGENT.md` - Description of this library for the AI agent who develops this library
   - `libraryname/LibraryName.md` - Documentation for END users and AI agents who will build with this library. Use `lib-doc` SKILL to edit it.
 - After changing a library manual or its images, run `npm run sync-skill` to refresh the `gxw2-libraries` references (`npm run check-skill` verifies them).
+- Never update version in package.json

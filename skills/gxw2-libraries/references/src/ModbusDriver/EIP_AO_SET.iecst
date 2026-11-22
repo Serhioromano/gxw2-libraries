@@ -1,0 +1,22 @@
+(*
+  EIP_AO_SET - write one analog output point of a remote EIP coupler.
+  Returns the value written (iVal).
+
+  iRemote = EIP_REMOTE1..EIP_REMOTE4 (1..4), iNum is a 0-based point number.
+
+  Analog outputs occupy 50 words per coupler:
+    coupler 1  R23300..R23349
+    coupler 2  R23350..R23399
+    coupler 3  R23400..R23449
+    coupler 4  R23450..R23499
+  Registers are addressed through the index register Z1, so the body computes
+  the register from base + (coupler - 1) * step + point.
+
+  Arguments are clamped with LIMITATION: iRemote to 1..4 and iNum to
+  0..49, so a call with an out-of-range point reads/writes the nearest
+  valid point instead of being skipped.
+  The return type is set in the GX Works 2 POU properties.
+*)
+Z1 := 23300 + (LIMITATION(1, iRemote, 4) - 1) * 50 + LIMITATION(0, iNum, 49); (* R23300 + coupler offset *)
+R0Z1 := iVal;
+EIP_AO_SET := iVal; (* return the value written *)

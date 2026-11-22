@@ -1,0 +1,6 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"dwIn"	"DWORD"	""	"Input device (DWORD to check)"
+"VAR_INPUT"	"iBN"	"INT"	""	"Bit number (0-based)"
+"VAR"	"xTmp"	"BOOL"	""	"Result: TRUE if target bit is ON"
+"VAR"	"iBN2"	"INT"	""	"Clamped bit number (0..31)"

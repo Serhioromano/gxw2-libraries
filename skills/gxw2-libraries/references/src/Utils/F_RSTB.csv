@@ -1,0 +1,6 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"wIn"	"WORD"	""	"Input device (WORD to modify)"
+"VAR_INPUT"	"iBN"	"INT"	""	"Bit number to reset (0-based)"
+"VAR"	"wTmp"	"WORD"	""	"Mask with target bit cleared"
+"VAR"	"iBN2"	"INT"	""	"Clamped bit number (0..15)"

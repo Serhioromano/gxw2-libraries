@@ -1,0 +1,3 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"xInit"	"BOOL"	""	"Initialisation command: switches port 2 to Mitsubishi protocol on rising edge"

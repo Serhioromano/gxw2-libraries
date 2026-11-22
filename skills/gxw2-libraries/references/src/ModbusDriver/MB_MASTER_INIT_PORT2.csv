@@ -1,0 +1,5 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"xInit"	"BOOL"	""	"Initialisation command: master is (re-)initialised on rising edge"
+"VAR_INPUT"	"PortSettings"	"DWORD"	""	"Port bit-field from MB_PORT_SETTINGS"
+"VAR"	"temp"	"DWORD"	""	"Temporary bit-field written to D8120"

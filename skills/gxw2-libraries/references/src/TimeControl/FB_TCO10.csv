@@ -1,0 +1,7 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Device"	"Address"	"Comment"
+"VAR_INPUT"	"xReset"	"BOOL"	""	""	""	"Reset: holds the elapsed time at 0 while TRUE"
+"VAR_OUTPUT"	"diMs"	"DINT"	""	""	""	"Elapsed time since last reset in milliseconds"
+"VAR_OUTPUT"	"di01ms"	"DINT"	""	""	""	"Elapsed time since last reset in 0.1 ms units (raw scan-time sum)"
+"VAR"	"wScan"	"WORD"	""	""	""	"Copy of D8010 current scan time (0.1 ms units)"
+"VAR"	"diTicks"	"DINT"	""	""	""	"Accumulated scan time in 0.1 ms units"

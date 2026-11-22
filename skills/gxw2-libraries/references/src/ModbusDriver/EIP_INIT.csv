@@ -1,0 +1,4 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"xInit"	"BOOL"	""	"Initialisation trigger: configuration is written while TRUE (one scan)"
+"VAR_INPUT"	"iModules"	"INT"	""	"Number of remote couplers (1..4) written to D8325"

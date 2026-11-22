@@ -1,0 +1,6 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Device"	"Address"	"Comment"	"Remark"	"Relation with System Label"	"System Label Name"	"Attribute"
+"VAR_GLOBAL_CONSTANT"	"c_AM_ALARMS_NUM"	"INT"	"15"	""	""	"Alarm array upper bound = 15 (16 slots); multiple of 16 so FB_AM_PACK_ALARMS stays in bounds"	""	""	""	""
+"VAR_GLOBAL_CONSTANT"	"c_AM_EVENTS_NUM"	"INT"	"5"	""	""	"Event array upper bound = 5 (6 slots); events 0..3 exercised by the smoke test"	""	""	""	""
+"VAR_GLOBAL"	"AM_ALARMS"	"ARRAY [0..15] OF AM_ALARM"	""	""	""	"Alarm storage declared by the test project (V206 user-defined storage model)"	""	""	""	""
+"VAR_GLOBAL"	"AM_EVENTS"	"ARRAY [0..5] OF AM_EVENT"	""	""	""	"Event storage declared by the test project (V206 user-defined storage model)"	""	""	""	""

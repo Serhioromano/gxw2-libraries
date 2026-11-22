@@ -1,0 +1,7 @@
+"plc"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_IN_OUT"	"IN"	"BOOL"	""	"Reset command signal; cleared automatically after the 1-second window"
+"VAR_INPUT"	"AutoReset"	"INT"	""	"Time for auto reset in seconds"
+"VAR"	"fbTPReset"	"TP"	""	"Pulse timer (500 ms) holding the alarm reset window"
+"VAR"	"iCount"	"INT"	""	"Loop index over the alarm array"
+"VAR"	"ALARM"	"ST_AM_ALARM"	""	"Temporary alarm object"

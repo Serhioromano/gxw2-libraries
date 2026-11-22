@@ -42,10 +42,16 @@ libraries/
 
 `skills/gxw2-libraries/` is a short routing skill: `SKILL.md` points agents using
 `gxw2-st` to the relevant library manual. Its `references/` folder contains copies
-of all four user manuals and their images, generated from `libraries/` by
-`scripts/sync-skill.mjs` (`npm run sync-skill`). `package.json` declares `pi.skills`
-so the manuals are installed with the skill. Do not edit generated references by hand.
-Compiled `.sul` files remain in `libraries/` for manual installation by the user.
+of all four user manuals, their images, and the library sources, generated from
+`libraries/` by `scripts/sync-skill.mjs` (`npm run sync-skill`). The manuals are
+the primary reference; `references/src/` carries every `POU/` file plus a generated
+`references/src/INDEX.md` that maps each POU to its kind, purpose and files, so an
+agent can check exact edge-case behaviour, declared types and device side effects
+when a manual leaves them unclear. Label copies in `references/src/` are converted
+from UTF-16 LE to UTF-8 for reading; the originals in `POU/` stay importable into
+GX Works 2. `package.json` declares `pi.skills` so the payload is installed with
+the skill. Do not edit generated references by hand. Compiled `.sul` files remain
+in `libraries/` for manual installation by the user.
 
 | File / Folder | Purpose |
 |---|---|
@@ -55,8 +61,8 @@ Compiled `.sul` files remain in `libraries/` for manual installation by the user
 | `<LibraryName>.sul` | Compiled GX Works 2 library file |
 | `AGENT.md` | Notes for AI agent who edit library files |
 | `CHANGELOG.md` | Version history |
-| `skills/gxw2-libraries/` | Routing skill with bundled user documentation |
-| `scripts/sync-skill.mjs` | Regenerates the skill payload from `libraries/` |
+| `skills/gxw2-libraries/` | Routing skill with bundled user documentation and library sources |
+| `scripts/sync-skill.mjs` | Regenerates the skill payload (manuals, images, sources, index) from `libraries/` |
 
 ## Conventions
 

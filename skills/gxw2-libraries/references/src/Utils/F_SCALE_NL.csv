@@ -1,0 +1,7 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"iPN"	"INT"	""	"Number of points"
+"VAR_INPUT"	"iDStart"	"INT"	""	"Starting device of point table"
+"VAR_INPUT"	"iPV"	"INT"	""	"Process value (X coordinate)"
+"VAR"	"iCount"	"INT"	""	"Loop counter"
+"VAR"	"iJ"	"INT"	""	"Reverse point index"

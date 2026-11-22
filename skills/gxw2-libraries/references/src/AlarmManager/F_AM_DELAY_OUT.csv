@@ -1,0 +1,5 @@
+"plc"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"StartTime"	"DWORD"	""	"TimeControl timestamp when the condition first became active"
+"VAR_INPUT"	"CurTime"	"DWORD"	""	"Current TimeControl timestamp"
+"VAR_INPUT"	"Delay"	"INT"	""	"Delay threshold in 50 ms units; 0 = always TRUE"

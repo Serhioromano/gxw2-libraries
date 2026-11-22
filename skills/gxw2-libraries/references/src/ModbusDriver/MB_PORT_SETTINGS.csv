@@ -1,0 +1,6 @@
+"compiler"
+"Class"	"Label Name"	"Data Type"	"Constant"	"Comment"
+"VAR_INPUT"	"Parity"	"INT"	""	"Parity selection: MB_PARITY_NONE, MB_PARITY_ODD or MB_PARITY_EVEN"
+"VAR_INPUT"	"StopBit"	"INT"	""	"Stop-bit selection: MB_STOPBIT_1 or MB_STOPBIT_2"
+"VAR_INPUT"	"Baudrate"	"INT"	""	"Baud-rate selection: MB_BPS_600 to MB_BPS_115200"
+"VAR"	"Temp"	"DWORD"	""	"Temporary bit-field accumulator"

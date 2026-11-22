@@ -1,0 +1,3 @@
+(* Negate iIn by multiplying it by -1. Returns INT.
+   Note: -32768 has no positive counterpart, F_NEG(-32768) returns -32768. *)
+F_NEG := iIn * (-1);
