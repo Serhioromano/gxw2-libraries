@@ -3,14 +3,16 @@
 # Publish a new version to npm + create a GitHub release.
 #   Workflow adapted from Serhioromano/pi-defender/Makefile.
 #   1. Checks prerequisites (gh, npm login).
-#   2. Computes the next version number from package.json + $(v).
-#   3. Replaces ## [Unreleased] with ## [v$NEWVER] in CHANGELOG.md (idempotent).
-#   4. Commits any uncommitted changes (including the CHANGELOG update).
-#   5. Pushes local commits to GitHub.
-#   6. Bumps version in package.json and creates a git commit + tag (npm version).
-#   7. Pushes the commit and tag to GitHub.
-#   8. Publishes the package to npm registry (npm publish).
-#   9. Extracts release notes from CHANGELOG.md and creates a GitHub release via gh.
+#   2. Regenerates the skill payload from libraries/ and commits it if it changed.
+#   3. Computes the next version number from package.json + $(v).
+#   4. Replaces ## [Unreleased] with ## [v$NEWVER] in CHANGELOG.md (idempotent).
+#   5. Commits any uncommitted changes (including the CHANGELOG update).
+#   6. Pushes local commits to GitHub.
+#   7. Verifies the skill payload is in sync with libraries/.
+#   8. Bumps version in package.json and creates a git commit + tag (npm version).
+#   9. Pushes the commit and tag to GitHub.
+#  10. Publishes the package to npm registry (npm publish).
+#  11. Extracts release notes from CHANGELOG.md and creates a GitHub release via gh.
 #
 # Usage: make publish v=<version>
 #   make publish v=patch   — 1.3.0 → 1.3.1
@@ -34,6 +36,13 @@ publish:
 		echo "🔑 Not logged in to npm. Running npm login..."; \
 		npm login; \
 	}
+	@echo "🔄 Syncing skill payload from libraries/..."
+	@npm run sync-skill
+	@if [ -n "$$(git status --porcelain -- skills)" ]; then \
+		echo "📦 Skill payload updated. Committing..."; \
+		git add skills; \
+		git commit -m "Sync skill payload"; \
+	fi
 	@NEWVER=$$(node -e "var p=require('./package.json').version.split('.').map(Number);console.log('$(v)'==='major'?p[0]+1+'.0.0':'$(v)'==='minor'?p[0]+'.'+(p[1]+1)+'.0':'$(v)'==='patch'?p[0]+'.'+p[1]+'.'+(p[2]+1):'$(v)')"); \
 	if grep -q '^## \[Unreleased\]' CHANGELOG.md; then \
 		echo "📝 CHANGELOG: [Unreleased] → [v$$NEWVER]"; \
@@ -46,6 +55,8 @@ publish:
 	fi
 	@git pull --rebase origin main
 	@git push origin main
+	@echo "🔎 Checking skill payload is in sync..."
+	@npm run check-skill
 	@newver=$$(npm version $(v) 2>&1 | tail -1); \
 		echo "🏷️  Version bumped: $$newver"
 	git push origin main --follow-tags
